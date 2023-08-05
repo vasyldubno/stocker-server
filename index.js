@@ -300,7 +300,7 @@ job30m.start()
 
 const jobDay = new cron.CronJob('*/30 * * * *', async () => {
   await axios.get(`${process.env.CLIENT_URL}/update-dividends`)
-})
+}, () => {}, true)
 jobDay.start()
 
 app.listen(80, () => {
