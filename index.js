@@ -140,7 +140,7 @@ app.get('/update-price-current', async (req, res) => {
   res.json({ route: '/update-price-current', result: { stocks } })
 })
 
-const job = new cron.CronJob('*/10 * * * *', async () => {
+const job = new cron.CronJob('*/30 * * * *', async () => {
   await axios.get(`${process.env.CLIENT_URL}/update-price-current`)
 })
 job.start()
