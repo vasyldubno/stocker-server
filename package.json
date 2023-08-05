@@ -16,6 +16,7 @@
     "nodemon": "^3.0.1"
   },
   "scripts": {
-    "update:supabase": "npx supabase gen types typescript --project-id 'cufytakzggluwlfdjqsn' --schema public > src/types/supabase.ts"
+    "update:supabase": "npx supabase gen types typescript --project-id 'cufytakzggluwlfdjqsn' --schema public > src/types/supabase.ts",
+    "start": "node src/main.ts"
   }
 }
