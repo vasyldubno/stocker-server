@@ -4,6 +4,8 @@ const supabase = require('@supabase/supabase-js')
 const getPriceCurrent = require('./src/utils/getPriceCurrent.js')
 const getPriceGrowth = require('./src/utils/getPriceGrowth.js')
 const ROUND = require('./src/utils/round.js')
+const cron = require('cron');
+const { default: axios } = require("axios");
 
 require("dotenv").config();
 
@@ -133,6 +135,11 @@ app.get('/update-price-current', async (req, res) => {
 
   res.json({ route: '/update-price-current', result: { stocks } })
 })
+
+const job = new cron.CronJob('*/1 * * * *', async () => {
+  await axios.get(`${process.env.CLIENT_URL}/update-price-current`)
+})
+job.start()
 
 app.listen(80, () => {
   console.log("SERVER WORK")
