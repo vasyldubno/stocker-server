@@ -14,4 +14,4 @@ const getPriceCurrent = async (
   }
 };
 
-module.exports = { getPriceCurrent }
+module.exports = getPriceCurrent

@@ -10,4 +10,4 @@ const getPriceGrowth = (
   return null;
 };
 
-module.exports = { getPriceGrowth }
+module.exports = getPriceGrowth
