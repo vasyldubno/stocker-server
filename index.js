@@ -127,6 +127,6 @@ app.get("/", (req, res) => {
 // });
 // job.start();
 
-app.listen(process.env.PORT || 3000, () => {
+app.listen(80, () => {
   console.log("SERVER WORK")
 });
