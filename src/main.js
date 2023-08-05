@@ -132,10 +132,10 @@ app.get("/update-price-current", async (req, res) => {
   res.json({ results: stocks, route: "/update-price-current" });
 });
 
-// const job = new cron.CronJob("*/1 * * * *", async () => {
-//   await axios.get(`${process.env.SERVER_URL}/update-price-current`);
-// });
-// job.start();
+const job = new cron.CronJob("*/1 * * * *", async () => {
+  await axios.get(`${process.env.SERVER_URL}/update-price-current`);
+});
+job.start();
 
 app.listen(process.env.PORT, () => {
   console.log("SERVER WORK");
