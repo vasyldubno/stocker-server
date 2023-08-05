@@ -1,4 +1,5 @@
-import { supabaseClient } from "./config/supabaseClient";
+// import { supabaseClient } from "./config/supabaseClient";
+const { supabaseClient } = require("./config/supabaseClient");
 import express, { Express, Request, Response } from "express";
 import cors from "cors";
 import { ROUND } from "./utils/round";
