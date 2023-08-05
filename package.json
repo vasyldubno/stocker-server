@@ -17,6 +17,7 @@
   },
   "scripts": {
     "update:supabase": "npx supabase gen types typescript --project-id 'cufytakzggluwlfdjqsn' --schema public > src/types/supabase.ts",
-    "start": "node index.js"
+    "start": "node index.js",
+    "start:dev": "nodemon index.js"
   }
 }

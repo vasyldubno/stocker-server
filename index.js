@@ -3,6 +3,7 @@ const cors = require("cors");
 const supabase = require('@supabase/supabase-js')
 const getPriceCurrent = require('./src/utils/getPriceCurrent.js')
 const getPriceGrowth = require('./src/utils/getPriceGrowth.js')
+const ROUND = require('./src/utils/round.js')
 
 require("dotenv").config();
 
@@ -36,28 +37,42 @@ app.get('/update-price-current', async (req, res) => {
               stock.ticker,
               stock.exchange
             );
+
             if (priceCurrent) {
               const priceGrowth = getPriceGrowth(
                 stock.price_target,
                 priceCurrent
               );
 
-              await supabaseClient
-                .from("stock")
+              const priceYearHigh = stock.price_year_high && priceCurrent > stock.price_year_high ? priceCurrent : stock.price_year_high
+              const gfValueMargin = ROUND(((Number(stock.gfValue) - priceCurrent) / priceCurrent) * 100)
+
+              const r = await client
+                .from('stock')
                 .update({
-                  price_current: priceCurrent,
+                  price_current: priceCurrent, 
                   price_growth: priceGrowth,
-                  price_year_high:
-                    stock.price_year_high &&
-                    priceCurrent > stock.price_year_high
-                      ? priceCurrent
-                      : stock.price_year_high,
-                  gfValueMargin: ROUND(
-                    ((Number(stock.gfValue) - priceCurrent) / priceCurrent) *
-                      100
-                  ),
+                  price_year_high: priceYearHigh,
+                  gfValueMargin: gfValueMargin
                 })
-                .eq("ticker", stock.ticker);
+                .eq('ticker', stock.ticker)
+
+              // const res = await client
+              //   .from("stock")
+              //   .update({
+              //     price_current: priceCurrent,
+              //     price_growth: priceGrowth,
+              //     price_year_high:
+              //       stock.price_year_high &&
+              //       priceCurrent > stock.price_year_high
+              //         ? priceCurrent
+              //         : stock.price_year_high,
+              //     gfValueMargin: ROUND(
+              //       ((Number(stock.gfValue) - priceCurrent) / priceCurrent) *
+              //         100
+              //     ),
+              //   })
+              //   .eq("ticker", stock.ticker).select();
 
               // if (stockPortfolio.data) {
               //   stockPortfolio.data.forEach(async (item) => {
