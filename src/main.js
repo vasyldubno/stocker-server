@@ -1,26 +1,34 @@
 // import { supabaseClient } from "./config/supabaseClient";
-const { supabaseClient } = require("./config/supabaseClient");
-import express, { Express, Request, Response } from "express";
-import cors from "cors";
-import { ROUND } from "./utils/round";
-import { getPriceCurrent } from "./utils/getPriceCurrent";
-import { getPriceGrowth } from "./utils/getPriceGrowth";
-import cron from "cron";
-import axios from "axios";
-import * as dotenv from "dotenv";
-dotenv.config();
+const { supabaseClient } = require("./config/supabaseClient.js");
+// import express, { Express, Request, Response } from "express";
+const express = require("express");
+// import cors from "cors";
+const cors = require("cors");
+// import { ROUND } from "./utils/round";
+const { ROUND } = require("./utils/round")
+// import { getPriceCurrent } from "./utils/getPriceCurrent";
+const { getPriceCurrent } = require("./utils/getPriceCurrent")
+// import { getPriceGrowth } from "./utils/getPriceGrowth";
+const { getPriceGrowth } = require("./utils/getPriceGrowth")
+// import cron from "cron";
+const cron = require('cron')
+// import axios from "axios";
+const axios = require('axios')
+// import * as dotenv from "dotenv";
+// dotenv.config();
+require("dotenv").config();
 
-const app: Express = express();
+const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({ origin: process.env.CLIENT_URL }));
 
-app.get("/", (req: Request, res: Response) => {
+app.get("/", (req, res) => {
   res.json({ message: "Ok", route: "/" });
 });
 
-app.get("/update-price-current", async (req: Request, res: Response) => {
+app.get("/update-price-current", async (req, res) => {
   const stocks = await supabaseClient
     .from("stock")
     .select()
@@ -124,10 +132,10 @@ app.get("/update-price-current", async (req: Request, res: Response) => {
   res.json({ results: stocks, route: "/update-price-current" });
 });
 
-const job = new cron.CronJob("*/1 * * * *", async () => {
-  await axios.get(`${process.env.SERVER_URL}/update-price-current`);
-});
-job.start();
+// const job = new cron.CronJob("*/1 * * * *", async () => {
+//   await axios.get(`${process.env.SERVER_URL}/update-price-current`);
+// });
+// job.start();
 
 app.listen(process.env.PORT, () => {
   console.log("SERVER WORK");

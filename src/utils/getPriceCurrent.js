@@ -1,18 +1,17 @@
-import axios from "axios";
+// import axios from "axios";
+const axios = require('axios')
 
-interface IResponse {
-  last_price: number;
-}
-
-export const getPriceCurrent = async (
-  ticker: string,
-  exchange: string | null
+const getPriceCurrent = async (
+  ticker,
+  exchange
 ) => {
   if (ticker && exchange) {
-    const response = await axios.get<IResponse>(
+    const response = await axios.get(
       `https://markets.sh/api/v1/symbols/${exchange}:${ticker}?api_token=7ea62693bd4ebc0ae34595335732676b`
     );
 
     return Number(response.data.last_price.toFixed(2));
   }
 };
+
+module.exports = { getPriceCurrent }

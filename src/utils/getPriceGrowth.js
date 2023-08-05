@@ -1,6 +1,6 @@
-export const getPriceGrowth = (
-  priceTarget: number | null,
-  priceCurrent: number | null
+const getPriceGrowth = (
+  priceTarget,
+  priceCurrent
 ) => {
   if (priceTarget && priceCurrent) {
     return Number(
@@ -9,3 +9,5 @@ export const getPriceGrowth = (
   }
   return null;
 };
+
+module.exports = { getPriceGrowth }
