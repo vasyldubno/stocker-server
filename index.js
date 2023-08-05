@@ -22,7 +22,11 @@ app.get("/", (req, res) => {
 app.get('/update-price-current', async (req, res) => {
   const client = supabase.createClient('https://cufytakzggluwlfdjqsn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1Znl0YWt6Z2dsdXdsZmRqcXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTAzNzAyMDcsImV4cCI6MjAwNTk0NjIwN30.IAvHQ2HBCWaPzq71nK3e9k_h3Cu7VYVMBzCghiaqDl4')
 
-  const stocks = await client.from('stock').select().in('ticker', ['A', 'AAPL'])
+  const stocks = await client
+  .from('stock')
+  .select()
+  .order('ticker', { ascending: true })
+  // .in('ticker', ['A', 'AAPL'])
 
   if (stocks.data) {
     stocks.data.forEach((stock, index) => {
@@ -136,7 +140,7 @@ app.get('/update-price-current', async (req, res) => {
   res.json({ route: '/update-price-current', result: { stocks } })
 })
 
-const job = new cron.CronJob('*/1 * * * *', async () => {
+const job = new cron.CronJob('*/10 * * * *', async () => {
   await axios.get(`${process.env.CLIENT_URL}/update-price-current`)
 })
 job.start()
