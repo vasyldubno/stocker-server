@@ -138,5 +138,5 @@ const job = new cron.CronJob("*/1 * * * *", async () => {
 job.start();
 
 app.listen(process.env.PORT, () => {
-  console.log("SERVER WORK");
+  console.log("SERVER WORK")
 });
