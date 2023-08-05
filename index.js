@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const supabase = require('@supabase/supabase-js')
 
 require("dotenv").config();
 
@@ -13,10 +14,10 @@ app.get("/", (req, res) => {
   res.json({ message: "Ok", route: "/" });
 });
 
-app.get('/update-pricr-current', async (req, res) => {
+app.get('/update-price-current', async (req, res) => {
   res.json({ route: '/update-price-current'})
 })
 
-app.listen(process.env.PORT || 3000, () => {
+app.listen(80, () => {
   console.log("SERVER WORK")
 });
