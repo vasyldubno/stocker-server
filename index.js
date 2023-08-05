@@ -1,15 +1,15 @@
 // import { supabaseClient } from "./config/supabaseClient";
-const { supabaseClient } = require("./config/supabaseClient.js");
+const { supabaseClient } = require("./src/config/supabaseClient.js");
 // import express, { Express, Request, Response } from "express";
 const express = require("express");
 // import cors from "cors";
 const cors = require("cors");
 // import { ROUND } from "./utils/round";
-const { ROUND } = require("./utils/round")
+const { ROUND } = require("./src/utils/round.js")
 // import { getPriceCurrent } from "./utils/getPriceCurrent";
-const { getPriceCurrent } = require("./utils/getPriceCurrent")
+const { getPriceCurrent } = require("./src/utils/getPriceCurrent.js")
 // import { getPriceGrowth } from "./utils/getPriceGrowth";
-const { getPriceGrowth } = require("./utils/getPriceGrowth")
+const { getPriceGrowth } = require("./src/utils/getPriceGrowth.js")
 // import cron from "cron";
 const cron = require('cron')
 // import axios from "axios";
