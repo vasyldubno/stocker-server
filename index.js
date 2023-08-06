@@ -152,7 +152,7 @@ app.get('/update-dividends', async (req, res) => {
     .select()
     // .eq("is_trading", true)
     // .eq("is_dividend", true)
-    // .in('ticker', ['A', 'AAPL'])
+    .in('ticker', ['ADM'])
     .order("ticker", { ascending: true });
 
   if (stocks.data) {
@@ -298,9 +298,9 @@ const job30m = new cron.CronJob('*/30 * * * *', async () => {
 })
 job30m.start()
 
-const jobDay = new cron.CronJob('*/30 * * * *', async () => {
+const jobDay = new cron.CronJob('*/1 * * * *', async () => {
   await axios.get(`${process.env.CLIENT_URL}/update-dividends`)
-}, () => {}, true)
+})
 jobDay.start()
 
 app.listen(80, () => {
