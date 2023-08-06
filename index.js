@@ -315,5 +315,5 @@ const job = new cron.CronJob('*/1 * * * *', () => { console.log('RUN JOB') })
 
 app.listen(80, async () => {
   console.log("SERVER WORK")
-  await axios.get(`${process.env.CLIENT_URL}/update-dividends`)
+  // await axios.get(`${process.env.CLIENT_URL}/update-dividends`)
 });
