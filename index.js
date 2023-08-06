@@ -152,7 +152,7 @@ app.get('/update-dividends', async (req, res) => {
     .select()
     // .eq("is_trading", true)
     // .eq("is_dividend", true)
-    .in('ticker', ['ADM'])
+    // .in('ticker', ['ADM'])
     .order("ticker", { ascending: true });
 
   if (stocks.data) {
@@ -162,6 +162,8 @@ app.get('/update-dividends', async (req, res) => {
           const response = await axios.get(
             `https://api.polygon.io/v3/reference/dividends?ticker=${stock.ticker}&apiKey=OZ_9x0ccKRsnzoE6OqsoW0oGeQCmAohs`
           );
+
+          console.log(stock.ticker)
 
           /* --- UPDATE UPCOMING DIVIDEND ---  */
           const today = moment().format("YYYY-MM-DD");
@@ -298,10 +300,10 @@ const job30m = new cron.CronJob('*/30 * * * *', async () => {
 })
 job30m.start()
 
-const jobDay = new cron.CronJob('*/1 * * * *', async () => {
+const jobDay = new cron.CronJob('0 0 * * *', async () => {
   console.log('RUN JOB-DAY')
   await axios.get(`${process.env.CLIENT_URL}/update-dividends`)
-})
+}, () => {}, true)
 jobDay.start()
 
 app.listen(80, () => {
