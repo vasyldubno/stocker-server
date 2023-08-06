@@ -142,6 +142,8 @@ app.get('/update-price-current', async (req, res) => {
 })
 
 app.get('/update-dividends', async (req, res) => {
+  const { limit, offset } = req.query
+
   const supabaseClient = supabase.createClient(
     'https://cufytakzggluwlfdjqsn.supabase.co', 
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1Znl0YWt6Z2dsdXdsZmRqcXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTAzNzAyMDcsImV4cCI6MjAwNTk0NjIwN30.IAvHQ2HBCWaPzq71nK3e9k_h3Cu7VYVMBzCghiaqDl4'
@@ -150,9 +152,7 @@ app.get('/update-dividends', async (req, res) => {
   const stocks = await supabaseClient
     .from("stock")
     .select()
-    // .eq("is_trading", true)
-    // .eq("is_dividend", true)
-    // .in('ticker', ['ADM'])
+    .range(offset, offset + limit)
     .order("ticker", { ascending: true });
 
   if (stocks.data) {
