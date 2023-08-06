@@ -311,8 +311,9 @@ app.get('/update-dividends', async (req, res) => {
 // jobDay.start()
 
 const job = new cron.CronJob('*/1 * * * *', () => { console.log('RUN JOB') })
-job.start()
+// job.start()
 
-app.listen(80, () => {
+app.listen(80, async () => {
   console.log("SERVER WORK")
+  await axios.get(`${process.env.CLIENT_URL}/update-dividends`)
 });
