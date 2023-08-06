@@ -314,6 +314,47 @@ app.get('/update-dividends', async (req, res) => {
 //   )
 // jobDay.start()
 
+app.get('/test', async (req, res) => {
+  const supabaseClient = supabase.createClient(
+    'https://cufytakzggluwlfdjqsn.supabase.co', 
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1Znl0YWt6Z2dsdXdsZmRqcXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTAzNzAyMDcsImV4cCI6MjAwNTk0NjIwN30.IAvHQ2HBCWaPzq71nK3e9k_h3Cu7VYVMBzCghiaqDl4'
+  )
+
+  const stocks = await supabaseClient
+    .from("stock")
+    .select('ticker')
+    // .range(from, to)
+    .limit(100)
+    .order("ticker", { ascending: true });
+
+    if(stocks.data) {
+      let splitArrays = [];
+      for (let i = 0; i < stocks.data.length; i += 50) {
+        const chunk = stocks.data.slice(i, i + 50);
+        splitArrays.push(chunk);
+      }
+      splitArrays.forEach((arr) => {
+        arr.forEach((stock, index) => {
+          setTimeout(
+            async () => {
+              console.log(stock.ticker)
+            }, 
+            index * 15000)
+        })
+      })
+    }
+
+  // if(stocks.data) {
+  //   stocks.data.forEach((stock, index) => {
+  //     setTimeout(async () => {
+  //       await supabaseClient.from('stock').update({}).eq('ticker', stock.ticker)
+  //     }, index * 15000)
+  //   })
+  // }
+
+  res.json({ message: 'Ok' })
+})
+
 app.listen(80, async () => {
   console.log("SERVER WORK")
   // await axios.get(`${process.env.CLIENT_URL}/update-dividends`)
