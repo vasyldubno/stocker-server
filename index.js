@@ -142,7 +142,7 @@ app.get('/update-price-current', async (req, res) => {
 })
 
 app.get('/update-dividends', async (req, res) => {
-  const { limit, offset } = req.query
+  const { from, to } = req.query
 
   const supabaseClient = supabase.createClient(
     'https://cufytakzggluwlfdjqsn.supabase.co', 
@@ -152,7 +152,7 @@ app.get('/update-dividends', async (req, res) => {
   const stocks = await supabaseClient
     .from("stock")
     .select()
-    .range(offset, offset + limit)
+    .range(from, to)
     .order("ticker", { ascending: true });
 
   if (stocks.data) {
@@ -300,18 +300,19 @@ app.get('/update-dividends', async (req, res) => {
 // })
 // job30m.start()
 
-// const jobDay = new cron.CronJob(
-//   '0 0 * * *', 
-//   async () => { 
-//     // console.log('RUN JOB-DAY'); 
-//     await axios.get(`${process.env.CLIENT_URL}/update-dividends`)}, 
-//     // () => {}, 
-//     // true
-//   )
-// jobDay.start()
-
-const job = new cron.CronJob('*/1 * * * *', () => { console.log('RUN JOB') })
-// job.start()
+const jobDay = new cron.CronJob(
+  '0 0 * * *', 
+  async () => { 
+    console.log('RUN JOB-DAY'); 
+    await axios.get(`${process.env.CLIENT_URL}/update-dividends?from=100&to=150`)
+    await axios.get(`${process.env.CLIENT_URL}/update-dividends?from=150&to=200`)
+    await axios.get(`${process.env.CLIENT_URL}/update-dividends?from=200&to=250`)
+    await axios.get(`${process.env.CLIENT_URL}/update-dividends?from=250&to=300`)
+  }, 
+  () => {}, 
+  true
+  )
+jobDay.start()
 
 app.listen(80, async () => {
   console.log("SERVER WORK")
