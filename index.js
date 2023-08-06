@@ -295,20 +295,23 @@ app.get('/update-dividends', async (req, res) => {
   res.json({ message: "Ok" });
 })
 
-const job30m = new cron.CronJob('*/30 * * * *', async () => {
-  await axios.get(`${process.env.CLIENT_URL}/update-price-current`)
-})
-job30m.start()
+// const job30m = new cron.CronJob('*/30 * * * *', async () => {
+//   await axios.get(`${process.env.CLIENT_URL}/update-price-current`)
+// })
+// job30m.start()
 
-const jobDay = new cron.CronJob(
-  '0 0 * * *', 
-  async () => { 
-    // console.log('RUN JOB-DAY'); 
-    await axios.get(`${process.env.CLIENT_URL}/update-dividends`)}, 
-    // () => {}, 
-    // true
-  )
-jobDay.start()
+// const jobDay = new cron.CronJob(
+//   '0 0 * * *', 
+//   async () => { 
+//     // console.log('RUN JOB-DAY'); 
+//     await axios.get(`${process.env.CLIENT_URL}/update-dividends`)}, 
+//     // () => {}, 
+//     // true
+//   )
+// jobDay.start()
+
+const job = new cron.CronJob('*/1 * * * *', () => { console.log('RUN JOB') })
+job.start()
 
 app.listen(80, () => {
   console.log("SERVER WORK")
