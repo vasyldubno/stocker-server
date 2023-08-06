@@ -303,7 +303,7 @@ job30m.start()
 const jobDay = new cron.CronJob(
   '0 0 * * *', 
   async () => { 
-    console.log('RUN JOB-DAY'); 
+    // console.log('RUN JOB-DAY'); 
     await axios.get(`${process.env.CLIENT_URL}/update-dividends`)}, 
     // () => {}, 
     // true
