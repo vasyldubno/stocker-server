@@ -276,7 +276,7 @@ app.get('/test', async (req, res) => {
 
   if (stocks.data) {
     stocks.data.forEach((stock, index) => {
-      setTimeout(async () => {
+      const t = setTimeout(async () => {
         try {
           const html = await axios.get(
             `https://stockanalysis.com/stocks/${stock.ticker.replace(
@@ -318,6 +318,7 @@ app.get('/test', async (req, res) => {
         } catch {
           console.log("ERROR");
         }
+        clearTimeout(t)
       }, index * 2000);
     });
   }
