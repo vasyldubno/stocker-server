@@ -472,7 +472,7 @@ app.get('/update-fundamentals', async (req, res) => {
           console.log("ERROR /update-fundamentals", stock.ticker, e.response.data);
         }
         clearTimeout(t)
-      }, 0 * index);
+      }, 1000 * index);
     });
   }
   
