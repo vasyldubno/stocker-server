@@ -143,6 +143,7 @@ app.get('/update-price-current', async (req, res) => {
 })
 
 app.get('/update-dividends', async (req, res) => {
+  const { from, to } = req.query
 
   const supabaseClient = supabase.createClient(
     'https://cufytakzggluwlfdjqsn.supabase.co', 
@@ -151,91 +152,176 @@ app.get('/update-dividends', async (req, res) => {
 
   const stocks = await supabaseClient
     .from("stock")
-    .select("ticker")
-    .eq('is_dividend', true)
+    .select()
+    // .eq("ticker", "AAPL")
+    // .limit(100)
+    .range(from, to)
+    .eq("is_dividend", true)
     .order("ticker", { ascending: true });
 
   if (stocks.data) {
-    let splitArrays = [];
-    for (let i = 0; i < stocks.data.length; i += 50) {
-      const chunk = stocks.data.slice(i, i + 50);
-      splitArrays.push(chunk);
-    }
+    stocks.data.forEach((stock, index) => {
+      setTimeout(async () => {
+        try {
+          const html = await axios.get(
+            `https://stockanalysis.com/stocks/${stock.ticker.replace(
+              "-",
+              "."
+            )}/dividend/`
+          );
 
-    for (let i = 0; i < splitArrays.length; i++) {
-      for (let b = 0; b < splitArrays[i].length; b++) {
-        const t = setTimeout(
-          async () => {
-            try {
-                const response = await axios.get(
-                  `https://api.polygon.io/v3/reference/dividends?ticker=${splitArrays[i][b].ticker}&apiKey=OZ_9x0ccKRsnzoE6OqsoW0oGeQCmAohs`
-                );
+          /* --- UPDATE UPCOMING DIVIDEND ---  */
+          console.log(stock.ticker)
+          if (html) {
+            const $ = load(html.data);
 
-                /* --- UPDATE UPCOMING DIVIDEND ---  */
+            const today = moment().format("YYYY-MM-DD");
+
+            let lastPayDate = "";
+            let lastCashAmount;
+
+            $("table > tbody > tr").each((i, el) => {
+              const payDate = $(el).find("td:nth-child(4)").text();
+              const cashAmount = $(el).find("td:nth-child(2)").text();
+
+              if (moment(payDate).isAfter(today)) {
+                lastPayDate = moment(payDate).format("YYYY-MM-DD");
+                lastCashAmount = ROUND(Number(cashAmount.split("$")[1]));
+              }
+            });
+
+            await supabaseClient
+              .from("stock")
+              .update({
+                dividend_upcoming_date: lastPayDate ? lastPayDate : null,
+                dividend_upcoming_value: lastCashAmount ? lastCashAmount : null,
+              })
+              .eq("ticker", stock.ticker);
+          }
+
+          /* --- UPDATE DIVIDEND INCOME --- */
+          const supaStockPortfolio = await supabaseClient
+            .from("stock_portfolio")
+            .select()
+            .eq("ticker", stock.ticker);
+
+          if (supaStockPortfolio.data) {
+            supaStockPortfolio.data.forEach(async (stockPortfolio) => {
+              if (html) {
+                const $ = load(html.data);
                 const today = moment().format("YYYY-MM-DD");
+                let foundFirstMatchingRow = false;
+                let lastPayDate;
+                let lastCashAmount;
 
-                const lastUpcomeDividend = response.data.results.find((item) =>
-                  moment(item.pay_date).isAfter(today)
-                );
+                $("table > tbody > tr").each((i, el) => {
+                  if (!foundFirstMatchingRow) {
+                    const payDate = $(el).find("td:nth-child(4)").text();
+                    const cashAmount = $(el).find("td:nth-child(2)").text();
+                    const exDividendDate = $(el).find("td:nth-child(1)").text();
 
-                if(lastUpcomeDividend) {
-                  console.log(splitArrays[i][b].ticker)
+                    if (
+                      moment(payDate).isBefore(today) &&
+                      moment(exDividendDate).isAfter(
+                        stockPortfolio.startTradeDate
+                      )
+                    ) {
+                      foundFirstMatchingRow = true;
+                      lastPayDate = payDate;
+                      lastCashAmount = cashAmount;
+                    }
+                  }
+                });
+
+                if (lastPayDate) {
+                  const isExistDividends = moment(
+                    stockPortfolio.lastDividendPayDate
+                  ).isSame(lastPayDate);
+
+                  if (!isExistDividends) {
+                    console.log("NEW DIVIDENDS", stockPortfolio.ticker);
+                    const supaPortfolio = await supabaseClient
+                      .from("portfolio")
+                      .select()
+                      .eq("id", stockPortfolio.portfolio_id)
+                      .single();
+
+                    if (supaPortfolio.data) {
+                      const supaUser = await supabaseClient
+                        .from("user")
+                        .select()
+                        .eq("id", supaPortfolio.data.user_id)
+                        .single();
+
+                      if (supaUser.data) {
+                        const totalDividends = ROUND(
+                          Number(lastCashAmount) *
+                            Number(stockPortfolio.amount_active_shares)
+                        );
+                        const cost =
+                          Number(stockPortfolio.average_cost_per_share) *
+                          Number(stockPortfolio.amount_active_shares);
+                        const newTotalReturnValue = ROUND(
+                          Number(stockPortfolio.total_return_value) +
+                            totalDividends
+                        );
+                        const newTotalReturnMargin = ROUND(
+                          (newTotalReturnValue / cost) * 100
+                        );
+                        const newTotalDividendIncome = ROUND(
+                          Number(stockPortfolio.total_dividend_income) +
+                            totalDividends
+                        );
+                        const newBalance = ROUND(
+                          supaUser.data.balance + totalDividends
+                        );
+                        const year = Number(moment(lastPayDate).format("YYYY"));
+
+                        await supabaseClient
+                          .from("stock_portfolio")
+                          .update({
+                            lastDividendPayDate:
+                              moment(lastPayDate).format("YYYY-MM-DD"),
+                            total_dividend_income: newTotalDividendIncome,
+                            total_return_value: newTotalReturnValue,
+                            total_return_margin: newTotalReturnMargin,
+                          })
+                          .eq("ticker", stockPortfolio.ticker)
+                          .eq("portfolio_id", stockPortfolio.portfolio_id);
+
+                        await supabaseClient.from("dividend").insert({
+                          amount_shares: Number(
+                            stockPortfolio.amount_active_shares
+                          ),
+                          dividendValue: ROUND(Number(lastCashAmount)),
+                          dividendYield: ROUND(
+                            (Number(lastCashAmount) /
+                              Number(stockPortfolio.average_cost_per_share)) *
+                              100
+                          ),
+                          ticker: stockPortfolio.ticker,
+                          payDate: moment(lastPayDate).format("YYYY-MM-DD"),
+                          totalAmount: totalDividends,
+                          portfolio_id: stockPortfolio.portfolio_id,
+                          year,
+                        });
+
+                        await supabaseClient
+                          .from("user")
+                          .update({ balance: newBalance })
+                          .eq("id", supaUser.data.id);
+                      }
+                    }
+                  }
                 }
-
-                await supabaseClient
-                  .from("stock")
-                  .update({
-                    dividend_upcoming_date: lastUpcomeDividend?.pay_date
-                      ? lastUpcomeDividend?.pay_date
-                      : null,
-                    dividend_upcoming_value: lastUpcomeDividend?.cash_amount
-                      ? lastUpcomeDividend?.cash_amount
-                      : null,
-                  })
-                  .eq("ticker", splitArrays[i][b].ticker);
-            } catch {}
-            clearTimeout(t)
-          }, 
-          b * 15000
-        )
-      }
-    }
-    // splitArrays.forEach((arr) => {
-    //   arr.forEach((stock, index) => {
-    //     setTimeout(
-    //       async () => {
-    //         try {
-    //       const response = await axios.get(
-    //         `https://api.polygon.io/v3/reference/dividends?ticker=${stock.ticker}&apiKey=OZ_9x0ccKRsnzoE6OqsoW0oGeQCmAohs`
-    //       );
-
-    //       /* --- UPDATE UPCOMING DIVIDEND ---  */
-    //       const today = moment().format("YYYY-MM-DD");
-
-    //       const lastUpcomeDividend = response.data.results.find((item) =>
-    //         moment(item.pay_date).isAfter(today)
-    //       );
-
-    //       if(lastUpcomeDividend) {
-    //         console.log(stock.ticker)
-    //       }
-
-    //       await supabaseClient
-    //         .from("stock")
-    //         .update({
-    //           dividend_upcoming_date: lastUpcomeDividend?.pay_date
-    //             ? lastUpcomeDividend?.pay_date
-    //             : null,
-    //           dividend_upcoming_value: lastUpcomeDividend?.cash_amount
-    //             ? lastUpcomeDividend?.cash_amount
-    //             : null,
-    //         })
-    //         .eq("ticker", stock.ticker);
-    //     } catch {}
-    //       }, 
-    //       index * 15000)
-    //   })
-    // })
+              }
+            });
+          }
+        } catch {
+          console.log("ERROR");
+        }
+      }, index * 2000);
+    });
   }
 
   res.json({ message: "Ok" });
@@ -276,7 +362,7 @@ app.get('/test', async (req, res) => {
 
   if (stocks.data) {
     stocks.data.forEach((stock, index) => {
-      const t = setTimeout(async () => {
+      setTimeout(async () => {
         try {
           const html = await axios.get(
             `https://stockanalysis.com/stocks/${stock.ticker.replace(
@@ -285,10 +371,14 @@ app.get('/test', async (req, res) => {
             )}/dividend/`
           );
 
+          console.log(stock.ticker)
+
           if (html) {
             const $ = load(html.data);
 
             const today = moment().format("YYYY-MM-DD");
+
+            /* --- UPDATE UPCOMING DIVIDEND ---  */
             let lastPayDate = "";
             let lastCashAmount;
 
@@ -302,11 +392,6 @@ app.get('/test', async (req, res) => {
               }
             });
 
-            if(lastPayDate) {
-              console.log(stock.ticker)
-            }
-
-            /* --- UPDATE UPCOMING DIVIDEND ---  */
             await supabaseClient
               .from("stock")
               .update({
@@ -314,11 +399,132 @@ app.get('/test', async (req, res) => {
                 dividend_upcoming_value: lastCashAmount ? lastCashAmount : null,
               })
               .eq("ticker", stock.ticker);
+
+            /* --- UPDATE DIVIDEND INCOME --- */
+            const supaStockPortfolio = await supabaseClient
+              .from("stock_portfolio")
+              .select()
+              .eq("ticker", stock.ticker);
+
+            if (supaStockPortfolio.data) {
+              supaStockPortfolio.data.forEach(async (stockPortfolio) => {
+                if (html) {
+                  const $ = load(html.data);
+                  const today = moment().format("YYYY-MM-DD");
+                  let foundFirstMatchingRow = false;
+                  let lastPayDate;
+                  let lastCashAmount;
+
+                  $("table > tbody > tr").each((i, el) => {
+                    if (!foundFirstMatchingRow) {
+                      const payDate = $(el).find("td:nth-child(4)").text();
+                      const cashAmount = $(el).find("td:nth-child(2)").text();
+                      const exDividendDate = $(el)
+                        .find("td:nth-child(1)")
+                        .text();
+
+                      if (
+                        moment(payDate).isBefore(today) &&
+                        moment(exDividendDate).isAfter(
+                          stockPortfolio.startTradeDate
+                        )
+                      ) {
+                        foundFirstMatchingRow = true;
+                        lastPayDate = payDate;
+                        lastCashAmount = cashAmount;
+                      }
+                    }
+                  });
+
+                  if (lastPayDate) {
+                    const isExistDividends = moment(
+                      stockPortfolio.lastDividendPayDate
+                    ).isSame(lastPayDate);
+
+                    if (isExistDividends) {
+                      const supaPortfolio = await supabaseClient
+                        .from("portfolio")
+                        .select()
+                        .eq("id", stockPortfolio.portfolio_id)
+                        .single();
+
+                      if (supaPortfolio.data) {
+                        const supaUser = await supabaseClient
+                          .from("user")
+                          .select()
+                          .eq("id", supaPortfolio.data.user_id)
+                          .single();
+
+                        if (supaUser.data) {
+                          const totalDividends = ROUND(
+                            Number(lastCashAmount) *
+                              Number(stockPortfolio.amount_active_shares)
+                          );
+                          const cost =
+                            Number(stockPortfolio.average_cost_per_share) *
+                            Number(stockPortfolio.amount_active_shares);
+                          const newTotalReturnValue = ROUND(
+                            Number(stockPortfolio.total_return_value) +
+                              totalDividends
+                          );
+                          const newTotalReturnMargin = ROUND(
+                            (newTotalReturnValue / cost) * 100
+                          );
+                          const newTotalDividendIncome = ROUND(
+                            Number(stockPortfolio.total_dividend_income) +
+                              totalDividends
+                          );
+                          const newBalance = ROUND(
+                            supaUser.data.balance + totalDividends
+                          );
+                          const year = Number(
+                            moment(lastPayDate).format("YYYY")
+                          );
+
+                          await supabaseClient
+                            .from("stock_portfolio")
+                            .update({
+                              lastDividendPayDate:
+                                moment(lastPayDate).format("YYYY-MM-DD"),
+                              total_dividend_income: newTotalDividendIncome,
+                              total_return_value: newTotalReturnValue,
+                              total_return_margin: newTotalReturnMargin,
+                            })
+                            .eq("ticker", stockPortfolio.ticker)
+                            .eq("portfolio_id", stockPortfolio.portfolio_id);
+
+                          await supabaseClient.from("dividend").insert({
+                            amount_shares: Number(
+                              stockPortfolio.amount_active_shares
+                            ),
+                            dividendValue: ROUND(Number(lastCashAmount)),
+                            dividendYield: ROUND(
+                              (Number(lastCashAmount) /
+                                Number(stockPortfolio.average_cost_per_share)) *
+                                100
+                            ),
+                            ticker: stock.ticker,
+                            payDate: moment(lastPayDate).format("YYYY-MM-DD"),
+                            totalAmount: totalDividends,
+                            portfolio_id: stockPortfolio.portfolio_id,
+                            year,
+                          });
+
+                          await supabaseClient
+                            .from("user")
+                            .update({ balance: newBalance })
+                            .eq("id", supaUser.data.id);
+                        }
+                      }
+                    }
+                  }
+                }
+              });
+            }
           }
         } catch {
           console.log("ERROR");
         }
-        clearTimeout(t)
       }, index * 2000);
     });
   }
