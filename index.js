@@ -34,6 +34,7 @@ app.get('/update-price-current', async (req, res) => {
       setTimeout(async () => {
         try {
           if (stock.ticker && stock.price_target) {
+            console.log(stock.ticker)
             const priceCurrent = await getPriceCurrent(
               stock.ticker,
               stock.exchange
