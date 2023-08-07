@@ -359,55 +359,56 @@ app.get('/update-fundamentals', async (req, res) => {
   const stocks = await supabaseClient
     .from("stock")
     .select()
+    .eq('ticker', 'AAPL')
     .order("ticker", { ascending: true });
 
   if (stocks.data) {
     stocks.data.forEach((stock, index) => {
       const t = setTimeout(async () => {
         try {
-          const html = await axios.get(
-            `https://finviz.com/quote.ashx?t=${stock.ticker}`
-          );
+          // const html = await axios.get(
+          //   `https://finviz.com/quote.ashx?t=${stock.ticker}`
+          // );
 
-          console.log(stock.ticker);
+          // console.log(stock.ticker);
 
-          if(html.data) {
-            const $ = load(html.data);
+          // if(html.data) {
+          //   const $ = load(html.data);
 
-            const pe = $(
-              ".snapshot-table-wrapper > table > tbody > tr:nth-child(1) td:nth-child(4)"
-            ).text();
-            const roe = $(
-              ".snapshot-table-wrapper > table > tbody > tr:nth-child(6) td:nth-child(8)"
-            ).text();
-            const annualDividend = $(
-              ".snapshot-table-wrapper > table > tbody > tr:nth-child(7) td:nth-child(2)"
-            ).text();
-            const dividendYield = $(
-              ".snapshot-table-wrapper > table > tbody > tr:nth-child(8) td:nth-child(2)"
-            ).text();
-            const payoutRation = $(
-              ".snapshot-table-wrapper > table > tbody > tr:nth-child(11) td:nth-child(8)"
-            ).text();
-            const marketCap = $(
-              ".snapshot-table-wrapper > table > tbody > tr:nth-child(2) td:nth-child(2)"
-            ).text();
-            const de = $(
-              ".snapshot-table-wrapper > table > tbody > tr:nth-child(10) td:nth-child(4)"
-            ).text();
-            const beta = $(
-              ".snapshot-table-wrapper > table > tbody > tr:nth-child(7) td:nth-child(12)"
-            ).text();
-            const epsGrowth5Y = $(
-              ".snapshot-table-wrapper > table > tbody > tr:nth-child(7) td:nth-child(6)"
-            )
-              .text()
-              .split("%")[0];
-            const yearHigh = $(
-              ".snapshot-table-wrapper > table > tbody > tr:nth-child(6) td:nth-child(10)"
-            )
-              .text()
-              .split("-")[1];
+          //   const pe = $(
+          //     ".snapshot-table-wrapper > table > tbody > tr:nth-child(1) td:nth-child(4)"
+          //   ).text();
+          //   const roe = $(
+          //     ".snapshot-table-wrapper > table > tbody > tr:nth-child(6) td:nth-child(8)"
+          //   ).text();
+          //   const annualDividend = $(
+          //     ".snapshot-table-wrapper > table > tbody > tr:nth-child(7) td:nth-child(2)"
+          //   ).text();
+          //   const dividendYield = $(
+          //     ".snapshot-table-wrapper > table > tbody > tr:nth-child(8) td:nth-child(2)"
+          //   ).text();
+          //   const payoutRation = $(
+          //     ".snapshot-table-wrapper > table > tbody > tr:nth-child(11) td:nth-child(8)"
+          //   ).text();
+          //   const marketCap = $(
+          //     ".snapshot-table-wrapper > table > tbody > tr:nth-child(2) td:nth-child(2)"
+          //   ).text();
+          //   const de = $(
+          //     ".snapshot-table-wrapper > table > tbody > tr:nth-child(10) td:nth-child(4)"
+          //   ).text();
+          //   const beta = $(
+          //     ".snapshot-table-wrapper > table > tbody > tr:nth-child(7) td:nth-child(12)"
+          //   ).text();
+          //   const epsGrowth5Y = $(
+          //     ".snapshot-table-wrapper > table > tbody > tr:nth-child(7) td:nth-child(6)"
+          //   )
+          //     .text()
+          //     .split("%")[0];
+          //   const yearHigh = $(
+          //     ".snapshot-table-wrapper > table > tbody > tr:nth-child(6) td:nth-child(10)"
+          //   )
+          //     .text()
+          //     .split("-")[1];
 
             const GFValue = await getGFValue(stock.ticker);
 
@@ -420,24 +421,81 @@ app.get('/update-fundamentals', async (req, res) => {
               }
             };
 
+            const htmlStockAnalysisA = await axios.get(`https://stockanalysis.com/stocks/${stock.ticker}/financials/ratios/`)
+            
+            let pe;
+            let marketCap;
+            let de;
+            let roe;
+            let dividendYield;
+            let payoutRatio;
+            let beta;
+            let yearHigh;
+            
+            if(htmlStockAnalysisA.data) {
+              const $ = load(htmlStockAnalysisA.data)
+              const a = $("table[data-test='financials'] > tbody > tr:nth-child(1) > td:nth-child(2)").text()
+              marketCap = Number(a.replace(/,/g, '')) * 1000000
+              
+              $("table[data-test='financials'] > tbody > tr").each((i, el) => {
+                const cell = $(el).find("td:nth-child(1) > span").text();
+                
+                if (cell === "PE Ratio") {
+                  pe = Number($(el).find("td:nth-child(2)").text());
+                }
+                
+                if (cell === "Debt / Equity Ratio") {
+                  de = Number($(el).find("td:nth-child(2)").text());
+                }
+                
+                if (cell === "Return on Equity (ROE)") {
+                  roe = Number($(el).find("td:nth-child(2)").text().replace('%', ''));
+                }
+                
+                if (cell === "Dividend Yield") {
+                  dividendYield = Number($(el).find("td:nth-child(2)").text().replace('%', ''));
+                }
+                
+                if (cell === "Payout Ratio") {
+                  payoutRatio = Number($(el).find("td:nth-child(2)").text().replace('%', ''));
+                }
+              });
+            }
+            
+            const htmlStockAnalysisB = await axios.get(`https://stockanalysis.com/stocks/${stock.ticker}/`)
+            
+            if(htmlStockAnalysisB.data) {
+              const $ = load(htmlStockAnalysisB.data)
+              beta = $('main > div:nth-child(2) > div:nth-child(2) > table:nth-child(2) > tbody > tr:nth-child(6) > td:nth-child(2)').text()
+              yearHigh = (($('main > div:nth-child(2) > div:nth-child(2) > table:nth-child(2) > tbody > tr:nth-child(5) > td:nth-child(2)').text()).split('-')[1]).trim()
+            }
+            
+            console.log('pe', pe)
+            console.log('marketCap', marketCap)
+            console.log('de', de)
+            console.log('roe', roe)
+            console.log('dividendYield', dividendYield)
+            console.log('payoutRatio', payoutRatio)
+            console.log('beta', beta)
+            console.log('yearHigh', yearHigh)
+
             await supabaseClient
               .from("stock")
               .update({
                 pe: Number(pe),
-                roe: Number(roe.split("%")[0]),
-                annualDividend: Number(annualDividend),
-                dividendYield: Number(dividendYield.split("%")[0]),
-                payoutRation: Number(payoutRation.split("%")[0]),
+                roe: Number(roe),
+                // annualDividend: Number(annualDividend),
+                dividendYield: Number(dividendYield),
+                payoutRation: Number(payoutRatio),
                 marketCap: convertMarketCap(marketCap),
                 gfValue: GFValue,
                 gfValueMargin: getGFValueMargin(),
                 de: Number(de),
-                eps_growth_past_5y: Number(epsGrowth5Y),
+                // eps_growth_past_5y: Number(epsGrowth5Y),
                 beta: Number(beta),
                 price_year_high: Number(yearHigh),
               })
               .eq("ticker", stock.ticker);
-          }
 
           /* --- UPDATE REPORT_DATE --- */
           // const htmlZacks = await axios.get(
@@ -472,7 +530,7 @@ app.get('/update-fundamentals', async (req, res) => {
           console.log("ERROR /update-fundamentals", stock.ticker, e.response.data);
         }
         clearTimeout(t)
-      }, 1000 * index);
+      }, 2000 * index);
     });
   }
   
