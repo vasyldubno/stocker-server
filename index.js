@@ -528,7 +528,7 @@ app.get('/update-fundamentals', async (req, res) => {
           //   }
           // }
         } catch (e) {
-          console.log("ERROR /update-fundamentals", stock.ticker, e.response.data);
+          console.log("ERROR /update-fundamentals", stock.ticker, e.response);
         }
         clearTimeout(t)
       }, 2000 * index);
