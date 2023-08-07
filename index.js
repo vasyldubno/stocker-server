@@ -324,7 +324,7 @@ app.get('/update-dividends', async (req, res) => {
     });
   }
 
-  res.json({ message: "Ok" });
+  res.json({ message: "Ok", stocks });
 })
 
 // const job30m = new cron.CronJob('*/30 * * * *', async () => {
