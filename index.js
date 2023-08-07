@@ -9,6 +9,7 @@ const { default: axios } = require("axios");
 const moment = require('moment-timezone')
 const { load } = require('cheerio')
 const getGFValue = require('./src/utils/getGFValue.js')
+const updateDividendYears = require('./src/routes/updateDividendYears.js')
 
 require("dotenv").config();
 
@@ -322,6 +323,34 @@ app.get('/update-margins', async (req, res) => {
 })
 
 app.get('/update-fundamentals', async (req, res) => {
+  const convertMarketCap = (numberString) => {
+    if (typeof numberString !== "string") {
+      throw new Error("Input must be a string.");
+    }
+
+    const lastChar = numberString.slice(-1).toUpperCase();
+    const numericPart = parseFloat(numberString);
+
+    if (isNaN(numericPart)) {
+      throw new Error("Invalid number format.");
+    }
+
+    let multiplier;
+
+    switch (lastChar) {
+      case "B":
+        multiplier = 1000000000;
+        break;
+      case "M":
+        multiplier = 1000000;
+        break;
+      default:
+        throw new Error('Invalid abbreviation. Use "B" or "M".');
+    }
+
+    return numericPart * multiplier;
+  };
+
   const supabaseClient = supabase.createClient(
     'https://cufytakzggluwlfdjqsn.supabase.co', 
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1Znl0YWt6Z2dsdXdsZmRqcXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTAzNzAyMDcsImV4cCI6MjAwNTk0NjIwN30.IAvHQ2HBCWaPzq71nK3e9k_h3Cu7VYVMBzCghiaqDl4'
@@ -341,75 +370,78 @@ app.get('/update-fundamentals', async (req, res) => {
           );
 
           console.log(stock.ticker);
-          const $ = load(html.data);
 
-          const pe = $(
-            ".snapshot-table-wrapper > table > tbody > tr:nth-child(1) td:nth-child(4)"
-          ).text();
-          const roe = $(
-            ".snapshot-table-wrapper > table > tbody > tr:nth-child(6) td:nth-child(8)"
-          ).text();
-          const annualDividend = $(
-            ".snapshot-table-wrapper > table > tbody > tr:nth-child(7) td:nth-child(2)"
-          ).text();
-          const dividendYield = $(
-            ".snapshot-table-wrapper > table > tbody > tr:nth-child(8) td:nth-child(2)"
-          ).text();
-          const payoutRation = $(
-            ".snapshot-table-wrapper > table > tbody > tr:nth-child(11) td:nth-child(8)"
-          ).text();
-          const marketCap = $(
-            ".snapshot-table-wrapper > table > tbody > tr:nth-child(2) td:nth-child(2)"
-          ).text();
-          const de = $(
-            ".snapshot-table-wrapper > table > tbody > tr:nth-child(10) td:nth-child(4)"
-          ).text();
-          const beta = $(
-            ".snapshot-table-wrapper > table > tbody > tr:nth-child(7) td:nth-child(12)"
-          ).text();
-          const epsGrowth5Y = $(
-            ".snapshot-table-wrapper > table > tbody > tr:nth-child(7) td:nth-child(6)"
-          )
-            .text()
-            .split("%")[0];
-          const yearHigh = $(
-            ".snapshot-table-wrapper > table > tbody > tr:nth-child(6) td:nth-child(10)"
-          )
-            .text()
-            .split("-")[1];
+          if(html.data) {
+            const $ = load(html.data);
 
-          const GFValue = await getGFValue(stock.ticker);
+            const pe = $(
+              ".snapshot-table-wrapper > table > tbody > tr:nth-child(1) td:nth-child(4)"
+            ).text();
+            const roe = $(
+              ".snapshot-table-wrapper > table > tbody > tr:nth-child(6) td:nth-child(8)"
+            ).text();
+            const annualDividend = $(
+              ".snapshot-table-wrapper > table > tbody > tr:nth-child(7) td:nth-child(2)"
+            ).text();
+            const dividendYield = $(
+              ".snapshot-table-wrapper > table > tbody > tr:nth-child(8) td:nth-child(2)"
+            ).text();
+            const payoutRation = $(
+              ".snapshot-table-wrapper > table > tbody > tr:nth-child(11) td:nth-child(8)"
+            ).text();
+            const marketCap = $(
+              ".snapshot-table-wrapper > table > tbody > tr:nth-child(2) td:nth-child(2)"
+            ).text();
+            const de = $(
+              ".snapshot-table-wrapper > table > tbody > tr:nth-child(10) td:nth-child(4)"
+            ).text();
+            const beta = $(
+              ".snapshot-table-wrapper > table > tbody > tr:nth-child(7) td:nth-child(12)"
+            ).text();
+            const epsGrowth5Y = $(
+              ".snapshot-table-wrapper > table > tbody > tr:nth-child(7) td:nth-child(6)"
+            )
+              .text()
+              .split("%")[0];
+            const yearHigh = $(
+              ".snapshot-table-wrapper > table > tbody > tr:nth-child(6) td:nth-child(10)"
+            )
+              .text()
+              .split("-")[1];
 
-          const getGFValueMargin = () => {
-            if (GFValue && stock.price_current) {
-              const result = ROUND(((GFValue - stock.price_current) / stock.price_current) * 100);
-              return result;
-            } else {
-              return 0;
-            }
-          };
+            const GFValue = await getGFValue(stock.ticker);
 
-          await supabaseClient
-            .from("stock")
-            .update({
-              pe: Number(pe),
-              roe: Number(roe.split("%")[0]),
-              annualDividend: Number(annualDividend),
-              dividendYield: Number(dividendYield.split("%")[0]),
-              payoutRation: Number(payoutRation.split("%")[0]),
-              marketCap: convertMarketCap(marketCap),
-              gfValue: GFValue,
-              gfValueMargin: getGFValueMargin(),
-              de: Number(de),
-              eps_growth_past_5y: Number(epsGrowth5Y),
-              beta: Number(beta),
-              price_year_high: Number(yearHigh),
-            })
-            .eq("ticker", stock.ticker);
+            const getGFValueMargin = () => {
+              if (GFValue && stock.price_current) {
+                const result = ROUND(((GFValue - stock.price_current) / stock.price_current) * 100);
+                return result;
+              } else {
+                return 0;
+              }
+            };
+
+            await supabaseClient
+              .from("stock")
+              .update({
+                pe: Number(pe),
+                roe: Number(roe.split("%")[0]),
+                annualDividend: Number(annualDividend),
+                dividendYield: Number(dividendYield.split("%")[0]),
+                payoutRation: Number(payoutRation.split("%")[0]),
+                marketCap: convertMarketCap(marketCap),
+                gfValue: GFValue,
+                gfValueMargin: getGFValueMargin(),
+                de: Number(de),
+                eps_growth_past_5y: Number(epsGrowth5Y),
+                beta: Number(beta),
+                price_year_high: Number(yearHigh),
+              })
+              .eq("ticker", stock.ticker);
+          }
 
           /* --- UPDATE REPORT_DATE --- */
           const htmlZacks = await axios.get(
-            `https://www.zacks.com/stock/research/${ticker}/earnings-calendar`
+            `https://www.zacks.com/stock/research/${stock.ticker}/earnings-calendar`
           );
           
           if(htmlZacks.data) {
@@ -430,21 +462,23 @@ app.get('/update-fundamentals', async (req, res) => {
                 await supabaseClient
                   .from("stock")
                   .update({ report_date: date })
-                  .eq("ticker", ticker);
+                  .eq("ticker", stock.ticker);
               } catch {
-                console.log("ERROR REPORT_DATE");
+                console.log("ERROR REPORT_DATE", stock.ticker);
               }
             }
           }
-        } catch {
-          console.log("ERROR /update-fundamentals");
+        } catch (e) {
+          console.log("ERROR /update-fundamentals", stock.ticker, e);
         }
-      }, 400 * index);
+      }, 300 * index);
     });
   }
   
   res.json({ route: '/update-fundamentals' })
 })
+
+app.get('/update-dividend-years', updateDividendYears)
 
 app.get('/test', async (req, res) => {
   res.json({ message: 'Ok' })
