@@ -410,6 +410,7 @@ app.get('/update-fundamentals', async (req, res) => {
           //     .text()
           //     .split("-")[1];
 
+          console.log(stock.ticker)
             const GFValue = await getGFValue(stock.ticker);
 
             const getGFValueMargin = () => {
@@ -470,14 +471,14 @@ app.get('/update-fundamentals', async (req, res) => {
               yearHigh = (($('main > div:nth-child(2) > div:nth-child(2) > table:nth-child(2) > tbody > tr:nth-child(5) > td:nth-child(2)').text()).split('-')[1]).trim()
             }
             
-            console.log('pe', pe)
-            console.log('marketCap', marketCap)
-            console.log('de', de)
-            console.log('roe', roe)
-            console.log('dividendYield', dividendYield)
-            console.log('payoutRatio', payoutRatio)
-            console.log('beta', beta)
-            console.log('yearHigh', yearHigh)
+            // console.log('pe', pe)
+            // console.log('marketCap', marketCap)
+            // console.log('de', de)
+            // console.log('roe', roe)
+            // console.log('dividendYield', dividendYield)
+            // console.log('payoutRatio', payoutRatio)
+            // console.log('beta', beta)
+            // console.log('yearHigh', yearHigh)
 
             await supabaseClient
               .from("stock")
