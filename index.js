@@ -8,6 +8,7 @@ const cron = require('cron');
 const { default: axios } = require("axios");
 const moment = require('moment-timezone')
 const { load } = require('cheerio')
+const getGFValue = require('./src/utils/getGFValue.js')
 
 require("dotenv").config();
 
@@ -253,26 +254,9 @@ app.get('/update-dividends', async (req, res) => {
   res.json({ message: "Ok", stocks });
 })
 
-// const job30m = new cron.CronJob('*/30 * * * *', async () => {
-//   await axios.get(`${process.env.CLIENT_URL}/update-price-current`)
-// })
-// job30m.start()
+app.get('/update-margins', async (req, res) => {
+  const { from, to } = req.query
 
-// const jobDay = new cron.CronJob(
-//   '0 0 * * *', 
-//   async () => { 
-//     console.log('RUN JOB-DAY'); 
-//     await axios.get(`${process.env.CLIENT_URL}/update-dividends?from=100&to=150`)
-//     await axios.get(`${process.env.CLIENT_URL}/update-dividends?from=150&to=200`)
-//     await axios.get(`${process.env.CLIENT_URL}/update-dividends?from=200&to=250`)
-//     await axios.get(`${process.env.CLIENT_URL}/update-dividends?from=250&to=300`)
-//   }, 
-//   () => {}, 
-//   true
-//   )
-// jobDay.start()
-
-app.get('/test', async (req, res) => {
   const supabaseClient = supabase.createClient(
     'https://cufytakzggluwlfdjqsn.supabase.co', 
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1Znl0YWt6Z2dsdXdsZmRqcXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTAzNzAyMDcsImV4cCI6MjAwNTk0NjIwN30.IAvHQ2HBCWaPzq71nK3e9k_h3Cu7VYVMBzCghiaqDl4'
@@ -281,9 +265,71 @@ app.get('/test', async (req, res) => {
   const stocks = await supabaseClient
     .from("stock")
     .select()
-    // .eq("ticker", "AAPL")
-    // .limit(100)
-    .eq("is_dividend", true)
+    .range(from, to)
+    .order("ticker", { ascending: true });
+
+  if (stocks.data) {
+    stocks.data.forEach((stock, index) => {
+      setTimeout(async () => {
+        try {
+          const htmlStockAnalysis = await axios.get(
+            `https://stockanalysis.com/stocks/${stock.ticker.replace(
+              "-",
+              "."
+            )}/financials/`
+          );
+
+          console.log(stock.ticker);
+
+          if (htmlStockAnalysis.data) {
+            const $ = load(htmlStockAnalysis.data);
+
+            let grossMargin = 0;
+            let netMargin = 0;
+
+            $("table[data-test='financials'] > tbody > tr").each((i, el) => {
+              const a = $(el).find("td:nth-child(1) > span").text();
+
+              if (a === "Gross Margin") {
+                grossMargin = Number(
+                  $(el).find("td:nth-child(2)").text().split("%")[0]
+                );
+              }
+
+              if (a === "Profit Margin") {
+                netMargin = Number(
+                  $(el).find("td:nth-child(2)").text().split("%")[0]
+                );
+              }
+            });
+
+            await supabaseClient
+              .from("stock")
+              .update({
+                gross_margin: Number(grossMargin),
+                net_margin: Number(netMargin),
+              })
+              .eq("ticker", stock.ticker);
+          }
+        } catch {
+          console.log("ERROR /update-margins");
+        }
+      }, index * 2000);
+    });
+  }
+
+  res.json({ route: '/update-margins' })
+})
+
+app.get('/update-fundamentals', async (req, res) => {
+  const supabaseClient = supabase.createClient(
+    'https://cufytakzggluwlfdjqsn.supabase.co', 
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1Znl0YWt6Z2dsdXdsZmRqcXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTAzNzAyMDcsImV4cCI6MjAwNTk0NjIwN30.IAvHQ2HBCWaPzq71nK3e9k_h3Cu7VYVMBzCghiaqDl4'
+  )
+
+  const stocks = await supabaseClient
+    .from("stock")
+    .select()
     .order("ticker", { ascending: true });
 
   if (stocks.data) {
@@ -291,174 +337,119 @@ app.get('/test', async (req, res) => {
       setTimeout(async () => {
         try {
           const html = await axios.get(
-            `https://stockanalysis.com/stocks/${stock.ticker.replace(
-              "-",
-              "."
-            )}/dividend/`
+            `https://finviz.com/quote.ashx?t=${stock.ticker}`
           );
 
-          console.log(stock.ticker)
+          console.log(stock.ticker);
+          const $ = load(html.data);
 
-          if (html) {
-            const $ = load(html.data);
+          const pe = $(
+            ".snapshot-table-wrapper > table > tbody > tr:nth-child(1) td:nth-child(4)"
+          ).text();
+          const roe = $(
+            ".snapshot-table-wrapper > table > tbody > tr:nth-child(6) td:nth-child(8)"
+          ).text();
+          const annualDividend = $(
+            ".snapshot-table-wrapper > table > tbody > tr:nth-child(7) td:nth-child(2)"
+          ).text();
+          const dividendYield = $(
+            ".snapshot-table-wrapper > table > tbody > tr:nth-child(8) td:nth-child(2)"
+          ).text();
+          const payoutRation = $(
+            ".snapshot-table-wrapper > table > tbody > tr:nth-child(11) td:nth-child(8)"
+          ).text();
+          const marketCap = $(
+            ".snapshot-table-wrapper > table > tbody > tr:nth-child(2) td:nth-child(2)"
+          ).text();
+          const de = $(
+            ".snapshot-table-wrapper > table > tbody > tr:nth-child(10) td:nth-child(4)"
+          ).text();
+          const beta = $(
+            ".snapshot-table-wrapper > table > tbody > tr:nth-child(7) td:nth-child(12)"
+          ).text();
+          const epsGrowth5Y = $(
+            ".snapshot-table-wrapper > table > tbody > tr:nth-child(7) td:nth-child(6)"
+          )
+            .text()
+            .split("%")[0];
+          const yearHigh = $(
+            ".snapshot-table-wrapper > table > tbody > tr:nth-child(6) td:nth-child(10)"
+          )
+            .text()
+            .split("-")[1];
 
-            const today = moment().format("YYYY-MM-DD");
+          const GFValue = await getGFValue(stock.ticker);
 
-            /* --- UPDATE UPCOMING DIVIDEND ---  */
-            let lastPayDate = "";
-            let lastCashAmount;
+          const getGFValueMargin = () => {
+            if (GFValue && stock.price_current) {
+              const result = ROUND(((GFValue - stock.price_current) / stock.price_current) * 100);
+              return result;
+            } else {
+              return 0;
+            }
+          };
 
-            $("table > tbody > tr").each((i, el) => {
-              const payDate = $(el).find("td:nth-child(4)").text();
-              const cashAmount = $(el).find("td:nth-child(2)").text();
+          await supabaseClient
+            .from("stock")
+            .update({
+              pe: Number(pe),
+              roe: Number(roe.split("%")[0]),
+              annualDividend: Number(annualDividend),
+              dividendYield: Number(dividendYield.split("%")[0]),
+              payoutRation: Number(payoutRation.split("%")[0]),
+              marketCap: convertMarketCap(marketCap),
+              gfValue: GFValue,
+              gfValueMargin: getGFValueMargin(),
+              de: Number(de),
+              eps_growth_past_5y: Number(epsGrowth5Y),
+              beta: Number(beta),
+              price_year_high: Number(yearHigh),
+            })
+            .eq("ticker", stock.ticker);
 
-              if (moment(payDate).isAfter(today)) {
-                lastPayDate = moment(payDate).format("YYYY-MM-DD");
-                lastCashAmount = ROUND(Number(cashAmount.split("$")[1]));
+          /* --- UPDATE REPORT_DATE --- */
+          const htmlZacks = await axios.get(
+            `https://www.zacks.com/stock/research/${ticker}/earnings-calendar`
+          );
+          
+          if(htmlZacks.data) {
+            const $ = load(htmlZacks.data);
+            const element = $(
+              ".key-expected-earnings-data-module > table > tbody > tr > th:nth-child(1)"
+            ).text();
+
+            const isValid = !element.startsWith("NA");
+
+            if (isValid && element.length > 0) {
+              try {
+                const month = element.split("/")[0];
+                const day = element.split("/")[1];
+                const year = element.split("/")[2].substring(0, 4);
+
+                const date = `${year}-${month}-${day}`;
+                await supabaseClient
+                  .from("stock")
+                  .update({ report_date: date })
+                  .eq("ticker", ticker);
+              } catch {
+                console.log("ERROR REPORT_DATE");
               }
-            });
-
-            await supabaseClient
-              .from("stock")
-              .update({
-                dividend_upcoming_date: lastPayDate ? lastPayDate : null,
-                dividend_upcoming_value: lastCashAmount ? lastCashAmount : null,
-              })
-              .eq("ticker", stock.ticker);
-
-            /* --- UPDATE DIVIDEND INCOME --- */
-            const supaStockPortfolio = await supabaseClient
-              .from("stock_portfolio")
-              .select()
-              .eq("ticker", stock.ticker);
-
-            if (supaStockPortfolio.data) {
-              supaStockPortfolio.data.forEach(async (stockPortfolio) => {
-                if (html) {
-                  const $ = load(html.data);
-                  const today = moment().format("YYYY-MM-DD");
-                  let foundFirstMatchingRow = false;
-                  let lastPayDate;
-                  let lastCashAmount;
-
-                  $("table > tbody > tr").each((i, el) => {
-                    if (!foundFirstMatchingRow) {
-                      const payDate = $(el).find("td:nth-child(4)").text();
-                      const cashAmount = $(el).find("td:nth-child(2)").text();
-                      const exDividendDate = $(el)
-                        .find("td:nth-child(1)")
-                        .text();
-
-                      if (
-                        moment(payDate).isBefore(today) &&
-                        moment(exDividendDate).isAfter(
-                          stockPortfolio.startTradeDate
-                        )
-                      ) {
-                        foundFirstMatchingRow = true;
-                        lastPayDate = payDate;
-                        lastCashAmount = cashAmount;
-                      }
-                    }
-                  });
-
-                  if (lastPayDate) {
-                    const isExistDividends = moment(
-                      stockPortfolio.lastDividendPayDate
-                    ).isSame(lastPayDate);
-
-                    if (isExistDividends) {
-                      const supaPortfolio = await supabaseClient
-                        .from("portfolio")
-                        .select()
-                        .eq("id", stockPortfolio.portfolio_id)
-                        .single();
-
-                      if (supaPortfolio.data) {
-                        const supaUser = await supabaseClient
-                          .from("user")
-                          .select()
-                          .eq("id", supaPortfolio.data.user_id)
-                          .single();
-
-                        if (supaUser.data) {
-                          const totalDividends = ROUND(
-                            Number(lastCashAmount) *
-                              Number(stockPortfolio.amount_active_shares)
-                          );
-                          const cost =
-                            Number(stockPortfolio.average_cost_per_share) *
-                            Number(stockPortfolio.amount_active_shares);
-                          const newTotalReturnValue = ROUND(
-                            Number(stockPortfolio.total_return_value) +
-                              totalDividends
-                          );
-                          const newTotalReturnMargin = ROUND(
-                            (newTotalReturnValue / cost) * 100
-                          );
-                          const newTotalDividendIncome = ROUND(
-                            Number(stockPortfolio.total_dividend_income) +
-                              totalDividends
-                          );
-                          const newBalance = ROUND(
-                            supaUser.data.balance + totalDividends
-                          );
-                          const year = Number(
-                            moment(lastPayDate).format("YYYY")
-                          );
-
-                          await supabaseClient
-                            .from("stock_portfolio")
-                            .update({
-                              lastDividendPayDate:
-                                moment(lastPayDate).format("YYYY-MM-DD"),
-                              total_dividend_income: newTotalDividendIncome,
-                              total_return_value: newTotalReturnValue,
-                              total_return_margin: newTotalReturnMargin,
-                            })
-                            .eq("ticker", stockPortfolio.ticker)
-                            .eq("portfolio_id", stockPortfolio.portfolio_id);
-
-                          await supabaseClient.from("dividend").insert({
-                            amount_shares: Number(
-                              stockPortfolio.amount_active_shares
-                            ),
-                            dividendValue: ROUND(Number(lastCashAmount)),
-                            dividendYield: ROUND(
-                              (Number(lastCashAmount) /
-                                Number(stockPortfolio.average_cost_per_share)) *
-                                100
-                            ),
-                            ticker: stock.ticker,
-                            payDate: moment(lastPayDate).format("YYYY-MM-DD"),
-                            totalAmount: totalDividends,
-                            portfolio_id: stockPortfolio.portfolio_id,
-                            year,
-                          });
-
-                          await supabaseClient
-                            .from("user")
-                            .update({ balance: newBalance })
-                            .eq("id", supaUser.data.id);
-                        }
-                      }
-                    }
-                  }
-                }
-              });
             }
           }
         } catch {
-          console.log("ERROR");
+          console.log("ERROR /update-fundamentals");
         }
-      }, index * 2000);
+      }, 300 * index);
     });
   }
+  
+  res.json({ route: '/update-fundamentals' })
+})
 
+app.get('/test', async (req, res) => {
   res.json({ message: 'Ok' })
 })
 
 app.listen(80, async () => {
   console.log("SERVER WORK")
-  // await axios.get(`${process.env.CLIENT_URL}/update-dividends`)
 });
