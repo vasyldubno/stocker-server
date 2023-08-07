@@ -1,12 +1,12 @@
 const express = require("express");
 const cors = require("cors");
-const supabase = require('@supabase/supabase-js')
-const getPriceCurrent = require('./src/utils/getPriceCurrent.js')
-const getPriceGrowth = require('./src/utils/getPriceGrowth.js')
-const ROUND = require('./src/utils/round.js')
-const cron = require('cron');
+const supabase = require("@supabase/supabase-js");
+const getPriceCurrent = require("./src/utils/getPriceCurrent.js");
+const getPriceGrowth = require("./src/utils/getPriceGrowth.js");
+const ROUND = require("./src/utils/round.js");
+const cron = require("cron");
 const { default: axios } = require("axios");
-const moment = require('moment-timezone')
+const moment = require("moment-timezone");
 
 require("dotenv").config();
 
@@ -20,13 +20,16 @@ app.get("/", (req, res) => {
   res.json({ message: "Ok", route: "/" });
 });
 
-app.get('/update-price-current', async (req, res) => {
-  const client = supabase.createClient('https://cufytakzggluwlfdjqsn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1Znl0YWt6Z2dsdXdsZmRqcXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTAzNzAyMDcsImV4cCI6MjAwNTk0NjIwN30.IAvHQ2HBCWaPzq71nK3e9k_h3Cu7VYVMBzCghiaqDl4')
+app.get("/update-price-current", async (req, res) => {
+  const client = supabase.createClient(
+    "https://cufytakzggluwlfdjqsn.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1Znl0YWt6Z2dsdXdsZmRqcXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTAzNzAyMDcsImV4cCI6MjAwNTk0NjIwN30.IAvHQ2HBCWaPzq71nK3e9k_h3Cu7VYVMBzCghiaqDl4"
+  );
 
   const stocks = await client
-  .from('stock')
-  .select()
-  .order('ticker', { ascending: true })
+    .from("stock")
+    .select()
+    .order("ticker", { ascending: true });
   // .in('ticker', ['A', 'AAPL'])
 
   if (stocks.data) {
@@ -51,18 +54,23 @@ app.get('/update-price-current', async (req, res) => {
                 priceCurrent
               );
 
-              const priceYearHigh = stock.price_year_high && priceCurrent > stock.price_year_high ? priceCurrent : stock.price_year_high
-              const gfValueMargin = ROUND(((Number(stock.gfValue) - priceCurrent) / priceCurrent) * 100)
+              const priceYearHigh =
+                stock.price_year_high && priceCurrent > stock.price_year_high
+                  ? priceCurrent
+                  : stock.price_year_high;
+              const gfValueMargin = ROUND(
+                ((Number(stock.gfValue) - priceCurrent) / priceCurrent) * 100
+              );
 
               await client
-                .from('stock')
+                .from("stock")
                 .update({
-                  price_current: priceCurrent, 
+                  price_current: priceCurrent,
                   price_growth: priceGrowth,
                   price_year_high: priceYearHigh,
-                  gfValueMargin: gfValueMargin
+                  gfValueMargin: gfValueMargin,
                 })
-                .eq('ticker', stock.ticker)
+                .eq("ticker", stock.ticker);
 
               // const res = await client
               //   .from("stock")
@@ -138,20 +146,19 @@ app.get('/update-price-current', async (req, res) => {
     });
   }
 
-  res.json({ route: '/update-price-current', result: { stocks } })
-})
+  res.json({ route: "/update-price-current", result: { stocks } });
+});
 
-app.get('/update-dividends', async (req, res) => {
-
+app.get("/update-dividends", async (req, res) => {
   const supabaseClient = supabase.createClient(
-    'https://cufytakzggluwlfdjqsn.supabase.co', 
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1Znl0YWt6Z2dsdXdsZmRqcXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTAzNzAyMDcsImV4cCI6MjAwNTk0NjIwN30.IAvHQ2HBCWaPzq71nK3e9k_h3Cu7VYVMBzCghiaqDl4'
-  )
+    "https://cufytakzggluwlfdjqsn.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1Znl0YWt6Z2dsdXdsZmRqcXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTAzNzAyMDcsImV4cCI6MjAwNTk0NjIwN30.IAvHQ2HBCWaPzq71nK3e9k_h3Cu7VYVMBzCghiaqDl4"
+  );
 
   const stocks = await supabaseClient
     .from("stock")
     .select()
-    .eq('is_dividend', true)
+    .eq("is_dividend", true)
     .order("ticker", { ascending: true });
 
   if (stocks.data) {
@@ -163,38 +170,36 @@ app.get('/update-dividends', async (req, res) => {
 
     for (let i = 0; i < splitArrays.length; i++) {
       for (let b = 0; b < splitArrays[i].length; b++) {
-setTimeout(
-          async () => {
-            try {
-          const response = await axios.get(
-            `https://api.polygon.io/v3/reference/dividends?ticker=${splitArrays[i][b].ticker}&apiKey=OZ_9x0ccKRsnzoE6OqsoW0oGeQCmAohs`
-          );
+        setTimeout(async () => {
+          try {
+            const response = await axios.get(
+              `https://api.polygon.io/v3/reference/dividends?ticker=${splitArrays[i][b].ticker}&apiKey=OZ_9x0ccKRsnzoE6OqsoW0oGeQCmAohs`
+            );
 
-          /* --- UPDATE UPCOMING DIVIDEND ---  */
-          const today = moment().format("YYYY-MM-DD");
+            /* --- UPDATE UPCOMING DIVIDEND ---  */
+            const today = moment().format("YYYY-MM-DD");
 
-          const lastUpcomeDividend = response.data.results.find((item) =>
-            moment(item.pay_date).isAfter(today)
-          );
+            const lastUpcomeDividend = response.data.results.find((item) =>
+              moment(item.pay_date).isAfter(today)
+            );
 
-          if(lastUpcomeDividend) {
-            console.log(splitArrays[i][b].ticker)
-          }
+            if (lastUpcomeDividend) {
+              console.log(splitArrays[i][b].ticker);
+            }
 
-          await supabaseClient
-            .from("stock")
-            .update({
-              dividend_upcoming_date: lastUpcomeDividend?.pay_date
-                ? lastUpcomeDividend?.pay_date
-                : null,
-              dividend_upcoming_value: lastUpcomeDividend?.cash_amount
-                ? lastUpcomeDividend?.cash_amount
-                : null,
-            })
-            .eq("ticker", splitArrays[i][b].ticker);
-        } catch {}
-          }, 
-          b * 15000)
+            await supabaseClient
+              .from("stock")
+              .update({
+                dividend_upcoming_date: lastUpcomeDividend?.pay_date
+                  ? lastUpcomeDividend?.pay_date
+                  : null,
+                dividend_upcoming_value: lastUpcomeDividend?.cash_amount
+                  ? lastUpcomeDividend?.cash_amount
+                  : null,
+              })
+              .eq("ticker", splitArrays[i][b].ticker);
+          } catch {}
+        }, b * 15000);
       }
     }
     // splitArrays.forEach((arr) => {
@@ -229,14 +234,14 @@ setTimeout(
     //         })
     //         .eq("ticker", stock.ticker);
     //     } catch {}
-    //       }, 
+    //       },
     //       index * 15000)
     //   })
     // })
   }
 
   res.json({ message: "Ok" });
-})
+});
 
 // const job30m = new cron.CronJob('*/30 * * * *', async () => {
 //   await axios.get(`${process.env.CLIENT_URL}/update-price-current`)
@@ -244,59 +249,62 @@ setTimeout(
 // job30m.start()
 
 // const jobDay = new cron.CronJob(
-//   '0 0 * * *', 
-//   async () => { 
-//     console.log('RUN JOB-DAY'); 
+//   '0 0 * * *',
+//   async () => {
+//     console.log('RUN JOB-DAY');
 //     await axios.get(`${process.env.CLIENT_URL}/update-dividends?from=100&to=150`)
 //     await axios.get(`${process.env.CLIENT_URL}/update-dividends?from=150&to=200`)
 //     await axios.get(`${process.env.CLIENT_URL}/update-dividends?from=200&to=250`)
 //     await axios.get(`${process.env.CLIENT_URL}/update-dividends?from=250&to=300`)
-//   }, 
-//   () => {}, 
+//   },
+//   () => {},
 //   true
 //   )
 // jobDay.start()
 
-app.get('/test', async (req, res) => {
+app.get("/test", async (req, res) => {
   const supabaseClient = supabase.createClient(
-    'https://cufytakzggluwlfdjqsn.supabase.co', 
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1Znl0YWt6Z2dsdXdsZmRqcXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTAzNzAyMDcsImV4cCI6MjAwNTk0NjIwN30.IAvHQ2HBCWaPzq71nK3e9k_h3Cu7VYVMBzCghiaqDl4'
-  )
+    "https://cufytakzggluwlfdjqsn.supabase.co",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1Znl0YWt6Z2dsdXdsZmRqcXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTAzNzAyMDcsImV4cCI6MjAwNTk0NjIwN30.IAvHQ2HBCWaPzq71nK3e9k_h3Cu7VYVMBzCghiaqDl4"
+  );
 
   const stocks = await supabaseClient
     .from("stock")
-    .select('ticker')
+    .select("ticker")
     // .range(from, to)
     // .limit(200)
     .order("ticker", { ascending: true });
 
-    if(stocks.data) {
-      let splitArrays = [];
-      for (let i = 0; i < stocks.data.length; i += 50) {
-        const chunk = stocks.data.slice(i, i + 50);
-        splitArrays.push(chunk);
-      }
-
-      // console.log(splitArrays)
-
-      // splitArrays.forEach((arr) => {
-      //   arr.forEach((stock, index) => {
-      //     setTimeout(
-      //       async () => {
-      //         console.log(stock.ticker)
-      //       }, 
-      //       index * 15000)
-      //   })
-      // })
-
-      /* --- RESET --- */
-      stocks.data.forEach(async (stock) => {
-        await supabaseClient.from('stock').update({
-          dividend_upcoming_date: null,
-          dividend_upcoming_value: null
-        }).eq('ticker', stock.ticker)
-      })
+  if (stocks.data) {
+    let splitArrays = [];
+    for (let i = 0; i < stocks.data.length; i += 50) {
+      const chunk = stocks.data.slice(i, i + 50);
+      splitArrays.push(chunk);
     }
+
+    // console.log(splitArrays)
+
+    // splitArrays.forEach((arr) => {
+    //   arr.forEach((stock, index) => {
+    //     setTimeout(
+    //       async () => {
+    //         console.log(stock.ticker)
+    //       },
+    //       index * 15000)
+    //   })
+    // })
+
+    /* --- RESET --- */
+    stocks.data.forEach(async (stock) => {
+      await supabaseClient
+        .from("stock")
+        .update({
+          dividend_upcoming_date: null,
+          dividend_upcoming_value: null,
+        })
+        .eq("ticker", stock.ticker);
+    });
+  }
 
   // if(stocks.data) {
   //   stocks.data.forEach((stock, index) => {
@@ -306,10 +314,10 @@ app.get('/test', async (req, res) => {
   //   })
   // }
 
-  res.json({ message: 'Ok' })
-})
+  res.json({ message: "Ok" });
+});
 
 app.listen(80, async () => {
-  console.log("SERVER WORK")
+  console.log("SERVER WORK");
   // await axios.get(`${process.env.CLIENT_URL}/update-dividends`)
 });
