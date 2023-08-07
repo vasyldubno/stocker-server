@@ -363,7 +363,7 @@ app.get('/update-fundamentals', async (req, res) => {
 
   if (stocks.data) {
     stocks.data.forEach((stock, index) => {
-      setTimeout(async () => {
+      const t = setTimeout(async () => {
         try {
           const html = await axios.get(
             `https://finviz.com/quote.ashx?t=${stock.ticker}`
@@ -469,9 +469,10 @@ app.get('/update-fundamentals', async (req, res) => {
             }
           }
         } catch (e) {
-          console.log("ERROR /update-fundamentals", stock.ticker, e);
+          console.log("ERROR /update-fundamentals", stock.ticker, e.response.data);
         }
-      }, 300 * index);
+        clearTimeout(t)
+      }, 0 * index);
     });
   }
   
