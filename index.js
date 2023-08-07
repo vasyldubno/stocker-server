@@ -439,7 +439,7 @@ app.get('/update-fundamentals', async (req, res) => {
         } catch {
           console.log("ERROR /update-fundamentals");
         }
-      }, 300 * index);
+      }, 400 * index);
     });
   }
   
