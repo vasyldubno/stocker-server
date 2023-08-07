@@ -150,7 +150,7 @@ app.get('/update-dividends', async (req, res) => {
 
   const stocks = await supabaseClient
     .from("stock")
-    .select()
+    .select("ticker")
     .eq('is_dividend', true)
     .order("ticker", { ascending: true });
 
@@ -163,38 +163,40 @@ app.get('/update-dividends', async (req, res) => {
 
     for (let i = 0; i < splitArrays.length; i++) {
       for (let b = 0; b < splitArrays[i].length; b++) {
-setTimeout(
+        const t = setTimeout(
           async () => {
             try {
-          const response = await axios.get(
-            `https://api.polygon.io/v3/reference/dividends?ticker=${splitArrays[i][b].ticker}&apiKey=OZ_9x0ccKRsnzoE6OqsoW0oGeQCmAohs`
-          );
+                const response = await axios.get(
+                  `https://api.polygon.io/v3/reference/dividends?ticker=${splitArrays[i][b].ticker}&apiKey=OZ_9x0ccKRsnzoE6OqsoW0oGeQCmAohs`
+                );
 
-          /* --- UPDATE UPCOMING DIVIDEND ---  */
-          const today = moment().format("YYYY-MM-DD");
+                /* --- UPDATE UPCOMING DIVIDEND ---  */
+                const today = moment().format("YYYY-MM-DD");
 
-          const lastUpcomeDividend = response.data.results.find((item) =>
-            moment(item.pay_date).isAfter(today)
-          );
+                const lastUpcomeDividend = response.data.results.find((item) =>
+                  moment(item.pay_date).isAfter(today)
+                );
 
-          if(lastUpcomeDividend) {
-            console.log(splitArrays[i][b].ticker)
-          }
+                if(lastUpcomeDividend) {
+                  console.log(splitArrays[i][b].ticker)
+                }
 
-          await supabaseClient
-            .from("stock")
-            .update({
-              dividend_upcoming_date: lastUpcomeDividend?.pay_date
-                ? lastUpcomeDividend?.pay_date
-                : null,
-              dividend_upcoming_value: lastUpcomeDividend?.cash_amount
-                ? lastUpcomeDividend?.cash_amount
-                : null,
-            })
-            .eq("ticker", splitArrays[i][b].ticker);
-        } catch {}
+                await supabaseClient
+                  .from("stock")
+                  .update({
+                    dividend_upcoming_date: lastUpcomeDividend?.pay_date
+                      ? lastUpcomeDividend?.pay_date
+                      : null,
+                    dividend_upcoming_value: lastUpcomeDividend?.cash_amount
+                      ? lastUpcomeDividend?.cash_amount
+                      : null,
+                  })
+                  .eq("ticker", splitArrays[i][b].ticker);
+            } catch {}
+            clearTimeout(t)
           }, 
-          b * 15000)
+          b * 15000
+        )
       }
     }
     // splitArrays.forEach((arr) => {
@@ -265,9 +267,8 @@ app.get('/test', async (req, res) => {
 
   const stocks = await supabaseClient
     .from("stock")
-    .select('ticker')
-    // .range(from, to)
-    // .limit(200)
+    .select("ticker")
+    .eq('is_dividend', true)
     .order("ticker", { ascending: true });
 
     if(stocks.data) {
@@ -276,6 +277,7 @@ app.get('/test', async (req, res) => {
         const chunk = stocks.data.slice(i, i + 50);
         splitArrays.push(chunk);
       }
+      res.json({ result: splitArrays })
 
       // console.log(splitArrays)
 
@@ -290,12 +292,12 @@ app.get('/test', async (req, res) => {
       // })
 
       /* --- RESET --- */
-      stocks.data.forEach(async (stock) => {
-        await supabaseClient.from('stock').update({
-          dividend_upcoming_date: null,
-          dividend_upcoming_value: null
-        }).eq('ticker', stock.ticker)
-      })
+      // stocks.data.forEach(async (stock) => {
+      //   await supabaseClient.from('stock').update({
+      //     dividend_upcoming_date: null,
+      //     dividend_upcoming_value: null
+      //   }).eq('ticker', stock.ticker)
+      // })
     }
 
   // if(stocks.data) {
@@ -306,7 +308,7 @@ app.get('/test', async (req, res) => {
   //   })
   // }
 
-  res.json({ message: 'Ok' })
+  // res.json({ message: 'Ok' })
 })
 
 app.listen(80, async () => {
