@@ -488,7 +488,7 @@ app.get('/update-fundamentals', async (req, res) => {
                 // annualDividend: Number(annualDividend),
                 dividendYield: Number(dividendYield),
                 payoutRation: Number(payoutRatio),
-                marketCap: convertMarketCap(marketCap),
+                marketCap: marketCap,
                 gfValue: GFValue,
                 gfValueMargin: getGFValueMargin(),
                 de: Number(de),
@@ -528,7 +528,7 @@ app.get('/update-fundamentals', async (req, res) => {
           //   }
           // }
         } catch (e) {
-          console.log("ERROR /update-fundamentals", stock.ticker, e.response);
+          console.log("ERROR /update-fundamentals", stock.ticker, e);
         }
         clearTimeout(t)
       }, 2000 * index);
