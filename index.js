@@ -270,7 +270,7 @@ app.get('/test', async (req, res) => {
     .from("stock")
     .select()
     // .eq("ticker", "AAPL")
-    .limit(100)
+    // .limit(100)
     .eq("is_dividend", true)
     .order("ticker", { ascending: true });
 
