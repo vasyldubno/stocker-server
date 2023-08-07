@@ -359,7 +359,7 @@ app.get('/update-fundamentals', async (req, res) => {
   const stocks = await supabaseClient
     .from("stock")
     .select()
-    .eq('ticker', 'AAPL')
+    // .eq('ticker', 'AAPL')
     .order("ticker", { ascending: true });
 
   if (stocks.data) {
