@@ -499,34 +499,34 @@ app.get('/update-fundamentals', async (req, res) => {
               .eq("ticker", stock.ticker);
 
           /* --- UPDATE REPORT_DATE --- */
-          // const htmlZacks = await axios.get(
-          //   `https://www.zacks.com/stock/research/${stock.ticker}/earnings-calendar`
-          // );
+          const htmlZacks = await axios.get(
+            `https://www.zacks.com/stock/research/${stock.ticker}/earnings-calendar`
+          );
           
-          // if(htmlZacks.data) {
-          //   const $ = load(htmlZacks.data);
-          //   const element = $(
-          //     ".key-expected-earnings-data-module > table > tbody > tr > th:nth-child(1)"
-          //   ).text();
+          if(htmlZacks.data) {
+            const $ = load(htmlZacks.data);
+            const element = $(
+              ".key-expected-earnings-data-module > table > tbody > tr > th:nth-child(1)"
+            ).text();
 
-          //   const isValid = !element.startsWith("NA");
+            const isValid = !element.startsWith("NA");
 
-          //   if (isValid && element.length > 0) {
-          //     try {
-          //       const month = element.split("/")[0];
-          //       const day = element.split("/")[1];
-          //       const year = element.split("/")[2].substring(0, 4);
+            if (isValid && element.length > 0) {
+              try {
+                const month = element.split("/")[0];
+                const day = element.split("/")[1];
+                const year = element.split("/")[2].substring(0, 4);
 
-          //       const date = `${year}-${month}-${day}`;
-          //       await supabaseClient
-          //         .from("stock")
-          //         .update({ report_date: date })
-          //         .eq("ticker", stock.ticker);
-          //     } catch {
-          //       console.log("ERROR REPORT_DATE", stock.ticker);
-          //     }
-          //   }
-          // }
+                const date = `${year}-${month}-${day}`;
+                await supabaseClient
+                  .from("stock")
+                  .update({ report_date: date })
+                  .eq("ticker", stock.ticker);
+              } catch {
+                console.log("ERROR REPORT_DATE", stock.ticker);
+              }
+            }
+          }
         } catch (e) {
           console.log("ERROR /update-fundamentals", stock.ticker, e);
         }
