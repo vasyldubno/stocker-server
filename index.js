@@ -424,8 +424,7 @@ app.get('/update-fundamentals', async (req, res) => {
                 return 0;
               }
             };
-
-            const htmlStockAnalysisA = await axios.get(`https://stockanalysis.com/stocks/${stock.ticker}/financials/ratios/`)
+            const htmlStockAnalysisA = await axios.get(`https://stockanalysis.com/stocks/${stock.ticker.replace('-', '.')}/financials/ratios/`)
             
             let pe;
             let marketCap;
@@ -466,7 +465,7 @@ app.get('/update-fundamentals', async (req, res) => {
               });
             }
             
-            const htmlStockAnalysisB = await axios.get(`https://stockanalysis.com/stocks/${stock.ticker}/`)
+            const htmlStockAnalysisB = await axios.get(`https://stockanalysis.com/stocks/${stock.ticker.replace('-', '.')}/`)
             
             if(htmlStockAnalysisB.data) {
               const $ = load(htmlStockAnalysisB.data)
