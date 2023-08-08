@@ -323,6 +323,8 @@ app.get('/update-margins', async (req, res) => {
 })
 
 app.get('/update-fundamentals', async (req, res) => {
+  const { from, to } = req.query
+
   const convertMarketCap = (numberString) => {
     if (typeof numberString !== "string") {
       throw new Error("Input must be a string.");
@@ -360,6 +362,7 @@ app.get('/update-fundamentals', async (req, res) => {
     .from("stock")
     .select()
     // .eq('ticker', 'AAPL')
+    .range(from, to)
     .order("ticker", { ascending: true });
 
   if (stocks.data) {
