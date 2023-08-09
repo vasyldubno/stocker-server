@@ -287,6 +287,8 @@ app.get('/update-margins', async (req, res) => {
 
             let grossMargin = 0;
             let netMargin = 0;
+            let annualDividend;
+            let epsGrowth5y;
 
             $("table[data-test='financials'] > tbody > tr").each((i, el) => {
               const a = $(el).find("td:nth-child(1) > span").text();
@@ -302,6 +304,18 @@ app.get('/update-margins', async (req, res) => {
                   $(el).find("td:nth-child(2)").text().split("%")[0]
                 );
               }
+
+              if (a === "Dividend Per Share") {
+                annualDividend = Number(
+                  $(el).find("td:nth-child(2)").text()
+                );
+              }
+
+              if (a === "EPS (Basic)") {
+                y1 = Number($(el).find("td:nth-child(2)").text());
+                y5 = Number($(el).find("td:nth-child(6)").text());
+                epsGrowth5y = ROUND(((y1 - y5) / y5) * 100)
+              }
             });
 
             await supabaseClient
@@ -309,6 +323,8 @@ app.get('/update-margins', async (req, res) => {
               .update({
                 gross_margin: Number(grossMargin),
                 net_margin: Number(netMargin),
+                eps_growth_past_5y: epsGrowth5y,
+                annualDividend: annualDividend
               })
               .eq("ticker", stock.ticker);
           }
