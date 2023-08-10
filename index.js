@@ -29,14 +29,23 @@ app.get('/update-price-current', async (req, res) => {
   const stocks = await client
   .from('stock')
   .select()
+  // .eq('ticker', 'AIU')
   .order('ticker', { ascending: true })
 
   if (stocks.data) {
     stocks.data.forEach((stock, index) => {
       setTimeout(async () => {
         try {
-          if (stock.ticker && stock.price_target) {
+          if(stock.ticker) {
             console.log(stock.ticker)
+            const res = await getPriceCurrent(stock.ticker, stock.exchange)
+            if(res.priceTodayGrowth) {
+              await client.from('stock').update({ price_growth_today_perc: res.priceTodayGrowth }).eq('ticker', stock.ticker)
+            }
+          }
+
+          if (stock.ticker && stock.price_target) {
+            // console.log(stock.ticker)
             const priceCurrent = await getPriceCurrent(
               stock.ticker,
               stock.exchange
@@ -58,7 +67,6 @@ app.get('/update-price-current', async (req, res) => {
                   price_growth: priceGrowth,
                   price_year_high: priceYearHigh,
                   gfValueMargin: gfValueMargin,
-                  price_growth_today_perc: priceCurrent.priceTodayGrowth
                 })
                 .eq('ticker', stock.ticker)
             }
