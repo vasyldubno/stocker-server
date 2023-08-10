@@ -10,7 +10,10 @@ const getPriceCurrent = async (
       `https://markets.sh/api/v1/symbols/${exchange}:${ticker}?api_token=7ea62693bd4ebc0ae34595335732676b`
     );
 
-    return Number(response.data.last_price.toFixed(2));
+    return {
+      priceCurrent: Number(response.data.last_price.toFixed(2)),
+      priceTodayGrowth: Number(response.data.change_perc_today.toFixed(2))
+    };
   }
 };
 

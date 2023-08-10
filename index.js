@@ -45,19 +45,20 @@ app.get('/update-price-current', async (req, res) => {
             if (priceCurrent) {
               const priceGrowth = getPriceGrowth(
                 stock.price_target,
-                priceCurrent
+                priceCurrent.priceCurrent
               );
 
-              const priceYearHigh = stock.price_year_high && priceCurrent > stock.price_year_high ? priceCurrent : stock.price_year_high
-              const gfValueMargin = ROUND(((Number(stock.gfValue) - priceCurrent) / priceCurrent) * 100)
+              const priceYearHigh = stock.price_year_high && priceCurrent.priceCurrent > stock.price_year_high ? priceCurrent.priceCurrent : stock.price_year_high
+              const gfValueMargin = ROUND(((Number(stock.gfValue) - priceCurrent.priceCurrent) / priceCurrent.priceCurrent) * 100)
 
               await client
                 .from('stock')
                 .update({
-                  price_current: priceCurrent, 
+                  price_current: priceCurrent.priceCurrent, 
                   price_growth: priceGrowth,
                   price_year_high: priceYearHigh,
-                  gfValueMargin: gfValueMargin
+                  gfValueMargin: gfValueMargin,
+                  price_growth_today_perc: priceCurrent.priceTodayGrowth
                 })
                 .eq('ticker', stock.ticker)
             }
@@ -385,50 +386,6 @@ app.get('/update-fundamentals', async (req, res) => {
     stocks.data.forEach((stock, index) => {
       const t = setTimeout(async () => {
         try {
-          // const html = await axios.get(
-          //   `https://finviz.com/quote.ashx?t=${stock.ticker}`
-          // );
-
-          // console.log(stock.ticker);
-
-          // if(html.data) {
-          //   const $ = load(html.data);
-
-          //   const pe = $(
-          //     ".snapshot-table-wrapper > table > tbody > tr:nth-child(1) td:nth-child(4)"
-          //   ).text();
-          //   const roe = $(
-          //     ".snapshot-table-wrapper > table > tbody > tr:nth-child(6) td:nth-child(8)"
-          //   ).text();
-          //   const annualDividend = $(
-          //     ".snapshot-table-wrapper > table > tbody > tr:nth-child(7) td:nth-child(2)"
-          //   ).text();
-          //   const dividendYield = $(
-          //     ".snapshot-table-wrapper > table > tbody > tr:nth-child(8) td:nth-child(2)"
-          //   ).text();
-          //   const payoutRation = $(
-          //     ".snapshot-table-wrapper > table > tbody > tr:nth-child(11) td:nth-child(8)"
-          //   ).text();
-          //   const marketCap = $(
-          //     ".snapshot-table-wrapper > table > tbody > tr:nth-child(2) td:nth-child(2)"
-          //   ).text();
-          //   const de = $(
-          //     ".snapshot-table-wrapper > table > tbody > tr:nth-child(10) td:nth-child(4)"
-          //   ).text();
-          //   const beta = $(
-          //     ".snapshot-table-wrapper > table > tbody > tr:nth-child(7) td:nth-child(12)"
-          //   ).text();
-          //   const epsGrowth5Y = $(
-          //     ".snapshot-table-wrapper > table > tbody > tr:nth-child(7) td:nth-child(6)"
-          //   )
-          //     .text()
-          //     .split("%")[0];
-          //   const yearHigh = $(
-          //     ".snapshot-table-wrapper > table > tbody > tr:nth-child(6) td:nth-child(10)"
-          //   )
-          //     .text()
-          //     .split("-")[1];
-
           console.log(stock.ticker)
             const GFValue = await getGFValue(stock.ticker);
 
@@ -488,29 +445,18 @@ app.get('/update-fundamentals', async (req, res) => {
               beta = $('main > div:nth-child(2) > div:nth-child(2) > table:nth-child(2) > tbody > tr:nth-child(6) > td:nth-child(2)').text()
               yearHigh = (($('main > div:nth-child(2) > div:nth-child(2) > table:nth-child(2) > tbody > tr:nth-child(5) > td:nth-child(2)').text()).split('-')[1]).trim()
             }
-            
-            // console.log('pe', pe)
-            // console.log('marketCap', marketCap)
-            // console.log('de', de)
-            // console.log('roe', roe)
-            // console.log('dividendYield', dividendYield)
-            // console.log('payoutRatio', payoutRatio)
-            // console.log('beta', beta)
-            // console.log('yearHigh', yearHigh)
 
             await supabaseClient
               .from("stock")
               .update({
                 pe: Number(pe),
                 roe: Number(roe),
-                // annualDividend: Number(annualDividend),
                 dividendYield: Number(dividendYield),
                 payoutRation: Number(payoutRatio),
                 marketCap: marketCap,
                 gfValue: GFValue,
                 gfValueMargin: getGFValueMargin(),
                 de: Number(de),
-                // eps_growth_past_5y: Number(epsGrowth5Y),
                 beta: Number(beta),
                 price_year_high: Number(yearHigh),
               })
@@ -558,7 +504,61 @@ app.get('/update-fundamentals', async (req, res) => {
 
 app.get('/update-dividend-years', updateDividendYears)
 
-app.get('/test', async (req, res) => {
+app.get('/update-is-dividend', async (req, res) => {
+  const { from, to } = req.query
+
+  const supabaseClient = supabase.createClient(
+    'https://cufytakzggluwlfdjqsn.supabase.co', 
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1Znl0YWt6Z2dsdXdsZmRqcXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTAzNzAyMDcsImV4cCI6MjAwNTk0NjIwN30.IAvHQ2HBCWaPzq71nK3e9k_h3Cu7VYVMBzCghiaqDl4'
+  )
+
+  const supaStocks = await supabaseClient
+    .from('stock')
+    .select()
+    .order('ticker', { ascending: true })
+    .range(from, to)
+    // .eq('ticker', 'AAPL')
+
+  if(supaStocks.data) {
+    supaStocks.data.forEach((stock, index) => {
+      setTimeout(
+        async () => {
+          try {
+            const html = await axios.get(`https://stockanalysis.com/stocks/${stock.ticker.replace('-', '.')}/dividend/`)
+
+            console.log(stock.ticker)
+
+            let isDividend;
+
+            if(html.data) {
+              const $ = load(html.data)
+              isDividend = $('main > div:nth-child(2) > div:nth-child(1) > div:nth-child(3) > div:nth-child(2) > div:nth-child(1)').text()
+            }
+
+            if(Number(isDividend.split('$')[1]) > 0) {
+              await supabaseClient
+                .from('stock')
+                .update({
+                  is_dividend: true,
+                })
+                .eq('ticker', stock.ticker)
+            } else {
+              await supabaseClient
+                .from('stock')
+                .update({
+                  is_dividend: false,
+                })
+                .eq('ticker', stock.ticker)
+            }
+          } catch(e) {
+            console.log('ERROR', stock.ticker, e.response.statusText)
+          }
+        }, 
+        index * 3000
+      )
+    })
+  }
+
   res.json({ message: 'Ok' })
 })
 
