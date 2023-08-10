@@ -1,5 +1,6 @@
 // import axios from "axios";
 const axios = require('axios')
+const ROUND = require('./round.js')
 
 const getPriceCurrent = async (
   ticker,
@@ -12,7 +13,7 @@ const getPriceCurrent = async (
 
     return {
       priceCurrent: Number(response.data.last_price.toFixed(2)),
-      priceTodayGrowth: Number(response.data.change_perc_today.toFixed(2))
+      priceTodayGrowth: ROUND(Number(response.data.change_perc_today) * 100)
     };
   }
 };
