@@ -10,6 +10,7 @@ const moment = require('moment-timezone')
 const { load } = require('cheerio')
 const getGFValue = require('./src/utils/getGFValue.js')
 const updateDividendYears = require('./src/routes/updateDividendYears.js')
+const getPriceTarget = require('./src/utils/getPriceTarget.js')
 
 require("dotenv").config();
 
