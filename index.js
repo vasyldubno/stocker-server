@@ -30,7 +30,6 @@ app.get('/update-price-current', async (req, res) => {
   const stocks = await client
   .from('stock')
   .select()
-  // .eq('ticker', 'AIU')
   .order('ticker', { ascending: true })
 
   if (stocks.data) {
