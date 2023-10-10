@@ -30,7 +30,7 @@ const getPriceTarget = async (ticker) => {
       const priceTarget = response.data.data[0].priceTarget;
       return Number(priceTarget.toFixed(2))
     } catch {
-      return 'error'
+      return null
     }
   } else {
     return null

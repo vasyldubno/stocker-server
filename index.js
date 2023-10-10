@@ -571,6 +571,35 @@ app.get('/update-is-dividend', async (req, res) => {
   res.json({ message: 'Ok' })
 })
 
+app.post('/update-price-target', async (req, res) => {
+  const { from, to } = req.query
+  // const { ticker } = req.query
+
+  const supabaseClient = supabase.createClient(
+    'https://cufytakzggluwlfdjqsn.supabase.co', 
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1Znl0YWt6Z2dsdXdsZmRqcXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTAzNzAyMDcsImV4cCI6MjAwNTk0NjIwN30.IAvHQ2HBCWaPzq71nK3e9k_h3Cu7VYVMBzCghiaqDl4'
+  )
+
+  const supaStocks = await supabaseClient
+    .from('stock')
+    .select()
+    .order('ticker', { ascending: true })
+    .range(from, to)
+    // .eq('ticker', ticker)
+
+  if(supaStocks.data) {
+    supaStocks.data.forEach((stock, index) => {
+      setTimeout(async () => {
+        const priceTarget = await getPriceTarget(stock.ticker.replace('-','.'));
+        await supabaseClient.from('stock').update({ price_target: priceTarget }).eq('ticker', stock.ticker)
+        console.log(stock.ticker, priceTarget)
+      }, index * 100)
+    })
+  }
+
+  res.json({ path: '/update-price-target' })
+})
+
 app.listen(80, async () => {
   console.log("SERVER WORK")
 });
