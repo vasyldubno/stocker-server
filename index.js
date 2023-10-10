@@ -31,21 +31,21 @@ app.get('/update-price-current', async (req, res) => {
   .from('stock')
   .select()
   .order('ticker', { ascending: true })
+  // .eq('ticker', 'REGN')
 
   if (stocks.data) {
     stocks.data.forEach((stock, index) => {
       setTimeout(async () => {
         try {
-          if(stock.ticker) {
-            console.log(stock.ticker)
-            const res = await getPriceCurrent(stock.ticker, stock.exchange)
-            if(res.priceTodayGrowth) {
-              await client.from('stock').update({ price_growth_today_perc: res.priceTodayGrowth }).eq('ticker', stock.ticker)
-            }
-          }
+          
+          // if(stock.ticker) {
+          //   const res = await getPriceCurrent(stock.ticker, stock.exchange)
+          //   if(res.priceTodayGrowth) {
+          //     await client.from('stock').update({ price_growth_today_perc: res.priceTodayGrowth }).eq('ticker', stock.ticker)
+          //   }
+          // }
 
           if (stock.ticker && stock.price_target) {
-            // console.log(stock.ticker)
             const priceCurrent = await getPriceCurrent(
               stock.ticker,
               stock.exchange
@@ -66,12 +66,27 @@ app.get('/update-price-current', async (req, res) => {
                   price_current: priceCurrent.priceCurrent, 
                   price_growth: priceGrowth,
                   price_year_high: priceYearHigh,
+                  price_growth_today_perc: priceCurrent.priceTodayGrowth,
                   gfValueMargin: gfValueMargin,
                 })
                 .eq('ticker', stock.ticker)
-            }
+            } 
           }
-        } catch (error) {}
+        } catch (error) {
+          console.log(error.response.data)
+          // const priceCurrent = stock.price_current
+          // const priceTarget = stock.price_target
+          // const priceGrowth = getPriceGrowth(priceTarget, priceCurrent)
+          
+          // console.log(stock.ticker, priceGrowth)
+          
+          // await client
+          //   .from('stock')
+          //     .update({
+          //       price_growth: priceGrowth
+          //     })
+          //     .eq('ticker', stock.ticker)
+        }
       }, 600 * index);
     });
   }
