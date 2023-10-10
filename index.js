@@ -572,7 +572,7 @@ app.get('/update-is-dividend', async (req, res) => {
   res.json({ message: 'Ok' })
 })
 
-app.post('/update-price-target', async (req, res) => {
+app.get('/update-price-target', async (req, res) => {
   const { from, to } = req.query
   // const { ticker } = req.query
 
