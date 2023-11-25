@@ -134,7 +134,7 @@ app.get('/update-dividends', async (req, res) => {
             let lastCashAmount;
 
             $("table > tbody > tr").each((i, el) => {
-              const payDate = $(el).find("td:nth-child(4)").text();
+              const payDate = $(el).find("td:nth-child(3)").text();
               const cashAmount = $(el).find("td:nth-child(2)").text();
 
               if (moment(payDate).isAfter(today)) {
@@ -168,7 +168,7 @@ app.get('/update-dividends', async (req, res) => {
 
                 $("table > tbody > tr").each((i, el) => {
                   if (!foundFirstMatchingRow) {
-                    const payDate = $(el).find("td:nth-child(4)").text();
+                    const payDate = $(el).find("td:nth-child(3)").text();
                     const cashAmount = $(el).find("td:nth-child(2)").text();
                     const exDividendDate = $(el).find("td:nth-child(1)").text();
 
